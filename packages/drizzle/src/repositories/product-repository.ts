@@ -1,75 +1,72 @@
-import type {
-  NewProduct,
-  Product,
-  ProductResponse,
-  UpdateProduct,
+import { and, eq, isNull } from 'drizzle-orm';
+import { drizzleDb } from '../db/connection';
+import {
+  products,
+  type NewProduct,
+  type Product,
+  type UpdateProduct,
 } from '../schema/entities/products';
-import { products } from '../schema/entities/products';
-import { BaseRepository } from './base-repository';
 
-/**
- * Simplified Product Repository
- * Only essential CRUD operations needed for APIs
- */
-export class ProductRepository extends BaseRepository<Product, NewProduct, UpdateProduct> {
-  protected table = products;
+export class ProductRepository {
+  private db = drizzleDb;
 
-  constructor(db?: any) {
-    super(db);
+  async findById(id: string, includeDeleted = false): Promise<Product | null> {
+    const where = includeDeleted
+      ? eq(products.id, id)
+      : and(eq(products.id, id), isNull(products.deletedAt));
+
+    const result = await this.db.select().from(products).where(where).limit(1);
+    return result[0] || null;
   }
 
-  /**
-   * Find product by ID
-   */
-  async findById(id: string): Promise<ProductResponse | null> {
-    return this.findOne({ id });
+  async findByOwnerId(ownerId: string): Promise<Product[]> {
+    return this.db
+      .select()
+      .from(products)
+      .where(and(eq(products.ownerId, ownerId), isNull(products.deletedAt)));
   }
 
-  /**
-   * Find products by owner ID
-   */
-  async findByOwner(ownerId: string): Promise<ProductResponse[]> {
-    return this.findMany({ owner_id: ownerId });
+  async findAll(includeDeleted = false): Promise<Product[]> {
+    const where = includeDeleted ? undefined : isNull(products.deletedAt);
+    return this.db.select().from(products).where(where);
   }
 
-  /**
-   * Create a new product
-   */
-  async create(productData: NewProduct): Promise<ProductResponse> {
-    // Validate price
-    if (productData.price <= 0) {
+  async create(data: NewProduct): Promise<Product> {
+    if (data.price <= 0) {
       throw new Error('Product price must be greater than 0');
     }
 
-    return this.create(productData);
+    const result = await this.db.insert(products).values(data).returning();
+    return result[0];
   }
 
-  /**
-   * Update a product
-   */
-  async update(id: string, productData: UpdateProduct): Promise<ProductResponse | null> {
-    // Validate price if provided
-    if (productData.price !== undefined && productData.price <= 0) {
+  async update(id: string, data: UpdateProduct): Promise<Product | null> {
+    if (data.price !== undefined && data.price <= 0) {
       throw new Error('Product price must be greater than 0');
     }
 
-    return this.update(id, productData);
+    const result = await this.db
+      .update(products)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(products.id, id), isNull(products.deletedAt)))
+      .returning();
+    return result[0] || null;
   }
 
-  /**
-   * Delete a product (soft delete by default)
-   */
-  async delete(id: string, force: boolean = false): Promise<boolean> {
-    return this.delete(id, force);
+  async softDelete(id: string): Promise<boolean> {
+    await this.db.update(products).set({ deletedAt: new Date() }).where(eq(products.id, id));
+    return true;
   }
 
-  /**
-   * Restore a soft-deleted product
-   */
+  async hardDelete(id: string): Promise<boolean> {
+    await this.db.delete(products).where(eq(products.id, id));
+    return true;
+  }
+
   async restore(id: string): Promise<boolean> {
-    return this.restore(id);
+    await this.db.update(products).set({ deletedAt: null }).where(eq(products.id, id));
+    return true;
   }
 }
 
-// Export singleton instance
 export const productRepository = new ProductRepository();

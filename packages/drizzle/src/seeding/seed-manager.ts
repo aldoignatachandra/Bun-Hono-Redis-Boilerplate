@@ -76,7 +76,7 @@ export class SeedManager {
   /**
    * Get seed data for specific environment
    */
-  private async getSeedDataForEnv(env: string): Promise<SeedData> {
+  private getSeedDataForEnv(env: string): SeedData {
     switch (env) {
       case 'dev':
         return devSeedData;
@@ -108,11 +108,12 @@ async function main() {
 
   try {
     switch (command) {
-      case 'run':
+      case 'run': {
         const env = process.argv.find(arg => arg.startsWith('--env='))?.split('=')[1];
         const reset = process.argv.includes('--reset');
         await seedManager.runSeeds({ env, reset });
         break;
+      }
 
       default:
         console.log(`
@@ -134,5 +135,5 @@ Examples:
 }
 
 if (require.main === module) {
-  main();
+  void main();
 }

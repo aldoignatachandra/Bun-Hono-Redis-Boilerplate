@@ -8,10 +8,11 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "generate": "drizzle-kit generate",
-    "migrate": "tsx src/migrations/migration-manager.ts up",
+    "migrate": "tsx src/migrations/drizzle-migrate.ts",
+    "migrate:all": "tsx src/migrations/drizzle-migrate.ts",
+    "migrate:one": "tsx src/migrations/migration-manager.ts up --steps=1",
     "migrate:create": "tsx src/migrations/migration-manager.ts create",
-    "migrate:deploy": "drizzle-kit migrate",
-    "migrate:down": "tsx src/migrations/migration-manager.ts down",
+    "migrate:down:one": "tsx src/migrations/migration-manager.ts down --steps=1",
     "migrate:status": "tsx src/migrations/migration-manager.ts status",
     "migrate:rollback": "tsx src/migrations/rollback-manager.ts rollback",
     "migrate:reset": "tsx src/migrations/migration-manager.ts reset",
@@ -48,7 +49,7 @@
     "lint:fix": "bunx eslint src --ext .ts --fix"
   },
   "dependencies": {
-    "drizzle-orm": "^0.29.3",
+    "drizzle-orm": "^0.44.7",
     "postgres": "^3.4.3",
     "@types/pg": "^8.10.9",
     "bcrypt": "^5.1.1",
@@ -58,7 +59,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.20.6",
+    "drizzle-kit": "^0.30.0",
     "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.10.5",
     "@types/uuid": "^9.0.7",
@@ -68,8 +69,5 @@
     "eslint": "^8.55.0",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0"
-  },
-  "peerDependencies": {
-    "@cqrs/common": "workspace:*"
   }
 }

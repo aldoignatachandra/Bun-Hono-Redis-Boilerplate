@@ -1,29 +1,51 @@
-import { configLoader } from '@cqrs/common';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../schema';
 
-// Connection pool configuration
+/**
+ * Database connection configuration
+ * These values can be overridden via environment variables
+ */
 const connectionConfig = {
-  max: 20, // Maximum number of connections
-  idle_timeout: 20, // Idle timeout in seconds
-  connect_timeout: 10, // Connect timeout in seconds
+  max: parseInt(process.env.DB_POOL_MAX || '20'),
+  idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '20'),
+  connect_timeout: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10'),
 };
 
-// Create postgres client
-const connectionString = configLoader.getConfig().database.url;
+/**
+ * Get database URL from environment variable
+ * Falls back to default PostgreSQL connection for development
+ */
+function getDatabaseUrl(): string {
+  const dbUrl = process.env.DB_URL;
+
+  if (!dbUrl) {
+    const defaultUrl = 'postgresql://postgres:postgres@localhost:5432/cqrs_demo';
+    console.warn(`DB_URL not found in environment, using default: ${defaultUrl}`);
+    return defaultUrl;
+  }
+
+  return dbUrl;
+}
+
+const connectionString = getDatabaseUrl();
 const client = postgres(connectionString, connectionConfig);
 
-// Create Drizzle instance
 export const drizzleDb = drizzle(client, {
   schema,
-  logger: process.env.NODE_ENV === 'development',
+  logger:
+    process.env.NODE_ENV === 'development'
+      ? {
+          logQuery: (query: string, params: unknown[]) => {
+            console.log('Query:', query);
+            console.log('Params:', params);
+          },
+        }
+      : false,
 });
 
-// Export for direct access
 export { client };
 
-// Database connection health check
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {
     await client`SELECT 1`;
@@ -34,7 +56,6 @@ export async function checkDatabaseHealth(): Promise<boolean> {
   }
 }
 
-// Graceful shutdown
 export async function closeDatabaseConnection(): Promise<void> {
   try {
     await client.end();

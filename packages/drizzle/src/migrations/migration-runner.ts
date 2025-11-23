@@ -194,11 +194,12 @@ async function main() {
 
   try {
     switch (command) {
-      case 'run':
+      case 'run': {
         const dryRun = process.argv.includes('--dry-run');
         const force = process.argv.includes('--force');
         await runner.runMigrations({ dryRun, force });
         break;
+      }
 
       default:
         console.log(`

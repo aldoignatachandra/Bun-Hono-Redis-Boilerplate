@@ -216,23 +216,69 @@ For detailed documentation, see [src/migrations/README.md](./src/migrations/READ
 
 ## Migration Commands
 
-```bash
-# Generate new migration (Drizzle Kit)
-bun run generate
+### Generate Migrations from Schema Changes
 
-# Run migrations (basic)
+Generate migrations automatically when you modify your schema files:
+
+```bash
+# Generate new migration from schema changes
+bun run generate
+```
+
+### Apply Migrations
+
+```bash
+# Apply all pending migrations (recommended for production)
 bun run migrate
 
-# Create new migration
-bun run migrate:create --name=add_new_field
+# Alternative: apply all pending migrations
+bun run migrate:all
 
-# Rollback migration
-bun run migrate:rollback --steps=1
+# Apply only one pending migration at a time
+bun run migrate:one
+
+# Rollback the last applied migration
+bun run migrate:down:one
+```
+
+### Advanced Migration Operations
+
+```bash
+# Create a new custom migration manually
+bun run migrate:create --name=add_new_field
 
 # Check migration status
 bun run migrate:status
 
-# Seed database
+# Show migration summary
+bun run migrate:summary
+
+# Perform health check
+bun run migrate:health
+
+# Rollback with preview
+bun run migrate:preview --steps=2
+
+# Rollback to specific migration
+bun run migrate:rollback --to=2024-01-01-00-00_add_users_table
+
+# Show rollback history
+bun run migrate:history
+```
+
+### Database Development Tools
+
+```bash
+# Open Drizzle Studio (visual database browser)
+bun run db:studio
+
+# Push schema changes directly (development only)
+bun run db:push
+
+# Check migration files for issues
+bun run db:check
+
+# Seed database with sample data
 bun run db:seed
 ```
 

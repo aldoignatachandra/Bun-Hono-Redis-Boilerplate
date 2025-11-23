@@ -3,7 +3,7 @@ import { SeedData } from '../types';
 /**
  * Development environment seed data
  */
-export const devSeedData: Promise<SeedData> = Promise.resolve({
+export const devSeedData: SeedData = {
   users: [
     {
       id: 'admin-1',
@@ -35,4 +35,4 @@ export const devSeedData: Promise<SeedData> = Promise.resolve({
       deletedAt: null,
     },
   ],
-});
+};

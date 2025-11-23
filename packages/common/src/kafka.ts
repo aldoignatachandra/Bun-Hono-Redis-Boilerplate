@@ -12,12 +12,12 @@ export const kafka = new Kafka({
         rejectUnauthorized: true,
       }
     : undefined,
-  // SASL configuration
-  sasl: configLoader.getConfig().kafka.sasl.username
+  // SASL configuration (optional, only if username is provided)
+  sasl: configLoader.getConfig().kafka.sasl?.username
     ? {
-        mechanism: configLoader.getConfig().kafka.sasl.mechanism as any,
-        username: configLoader.getConfig().kafka.sasl.username,
-        password: configLoader.getConfig().kafka.sasl.password,
+        mechanism: configLoader.getConfig().kafka.sasl?.mechanism as any,
+        username: configLoader.getConfig().kafka.sasl?.username,
+        password: configLoader.getConfig().kafka.sasl?.password,
       }
     : undefined,
   // Connection timeout

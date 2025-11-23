@@ -234,16 +234,18 @@ async function main() {
 
   try {
     switch (command) {
-      case 'create':
+      case 'create': {
         const name = process.argv.find(arg => arg.startsWith('--name='))?.split('=')[1];
         const createOnly = process.argv.includes('--create-only');
         await manager.createMigration({ name, createOnly });
         break;
+      }
 
-      case 'up':
+      case 'up': {
         const dryRun = process.argv.includes('--dry-run');
         await manager.migrateUp({ dryRun });
         break;
+      }
 
       default:
         console.log(`
