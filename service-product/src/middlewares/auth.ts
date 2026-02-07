@@ -1,8 +1,8 @@
 import { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import jwt from 'jsonwebtoken';
-import { configLoader } from './config/loader';
-import { JWTPayload } from './types';
+import { configLoader } from '../config/loader';
+import { JWTPayload } from '../helpers/types';
 
 // Authentication middleware
 export const auth = createMiddleware(async (c: Context, next) => {
@@ -51,8 +51,8 @@ export const generateToken = (user: { id: string; email: string; role: string })
 
 // User authentication utilities for Drizzle
 export const authenticateUser = async (
-  email: string,
-  password: string
+  _email: string,
+  _password: string
 ): Promise<{ id: string; email: string; role: string } | null> => {
   // This is a placeholder implementation
   // In a real application, you would use the Drizzle user repository
@@ -76,15 +76,15 @@ export const authenticateUser = async (
 };
 
 // Password hashing utilities
-export const hashPassword = async (password: string): Promise<string> => {
+export const hashPassword = async (_password: string): Promise<string> => {
   // This is a placeholder - would need to import bcrypt
   // return await bcrypt.hash(password, 10);
   return 'hashed_password_placeholder';
 };
 
 export const verifyPassword = async (
-  password: string,
-  hashedPassword: string
+  _password: string,
+  _hashedPassword: string
 ): Promise<boolean> => {
   // This is a placeholder - would need to import bcrypt
   // return await bcrypt.compare(password, hashedPassword);

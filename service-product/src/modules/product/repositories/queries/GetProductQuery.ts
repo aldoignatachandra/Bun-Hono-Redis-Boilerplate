@@ -1,5 +1,5 @@
 import { Service } from 'typedi';
-import { ProductRepository, type ProductRepositoryOptions } from '../repositories/ProductRepository';
+import { ProductRepository, type ProductRepositoryOptions } from '../ProductRepository';
 
 @Service()
 export class GetProductQuery {

@@ -1,11 +1,8 @@
 import { and, eq, isNull } from 'drizzle-orm';
-import { drizzleDb } from '../db/connection';
-import {
-  products,
-  type NewProduct,
-  type Product,
-  type UpdateProduct,
-} from '../schema/entities/products';
+import { drizzleDb } from '../../../db/connection';
+import { products, type NewProduct, type Product, type UpdateProduct } from '../domain/schema';
+
+export { type NewProduct, type Product, type UpdateProduct };
 
 export class ProductRepository {
   private db = drizzleDb;

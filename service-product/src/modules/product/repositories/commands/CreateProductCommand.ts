@@ -1,7 +1,7 @@
 import { Service } from 'typedi';
-import { productCreatedProducer } from '../events/product-events';
-import { ProductRepository } from '../repositories/ProductRepository';
-import { CreateProductInput } from '../validation/product';
+import { CreateProductRequest as CreateProductInput } from '../../domain/schema';
+import { productCreatedProducer } from '../../events/product-events';
+import { ProductRepository } from '../ProductRepository';
 
 @Service()
 export class CreateProductCommand {
@@ -11,9 +11,9 @@ export class CreateProductCommand {
     // Create product
     // The repository expects specific fields, we pass data directly assuming validation ensures types match
     const product = await this.productRepository.create({
-        name: data.name,
-        price: data.price,
-        ownerId: data.ownerId
+      name: data.name,
+      price: data.price,
+      ownerId: data.ownerId,
     });
 
     // Emit Kafka event

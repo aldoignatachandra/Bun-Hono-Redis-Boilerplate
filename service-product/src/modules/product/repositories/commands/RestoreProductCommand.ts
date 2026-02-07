@@ -1,6 +1,6 @@
 import { Service } from 'typedi';
-import { productRestoredProducer } from '../events/product-events';
-import { ProductRepository } from '../repositories/ProductRepository';
+import { productRestoredProducer } from '../../events/product-events';
+import { ProductRepository } from '../ProductRepository';
 
 @Service()
 export class RestoreProductCommand {

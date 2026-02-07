@@ -1,6 +1,6 @@
 import { Service } from 'typedi';
-import { productDeletedProducer } from '../events/product-events';
-import { ProductRepository } from '../repositories/ProductRepository';
+import { productDeletedProducer } from '../../events/product-events';
+import { ProductRepository } from '../ProductRepository';
 
 @Service()
 export class DeleteProductCommand {

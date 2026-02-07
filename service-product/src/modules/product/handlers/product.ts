@@ -35,7 +35,8 @@ productRoutes.post('/products', async c => {
 
     const createProductCommand = Container.get(CreateProductCommand);
     const product = await createProductCommand.execute({
-      ...validatedData,
+      name: validatedData.name,
+      price: validatedData.price,
       ownerId: user.sub,
     });
 

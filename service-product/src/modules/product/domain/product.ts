@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Base product schema for this service
-const BaseProductSchema = z.object({
+export const BaseProductSchema = z.object({
   id: z.string().optional(),
   name: z
     .string()
@@ -15,24 +15,16 @@ const BaseProductSchema = z.object({
 });
 
 // Product validation schemas
-export const CreateProductSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Product name is required')
-    .max(255, 'Product name must be less than 255 characters'),
-  price: z.number().positive('Price must be positive').int('Price must be an integer'),
-  ownerId: z.string().uuid('Owner ID must be a valid UUID'),
+export const CreateProductSchema = BaseProductSchema.pick({
+  name: true,
+  price: true,
 });
 
-export const UpdateProductSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Product name is required')
-    .max(255, 'Product name must be less than 255 characters')
-    .optional(),
-  price: z.number().positive('Price must be positive').int('Price must be an integer').optional(),
-  ownerId: z.string().uuid('Owner ID must be a valid UUID').optional(),
-});
+export const UpdateProductSchema = BaseProductSchema.pick({
+  name: true,
+  price: true,
+  ownerId: true,
+}).partial();
 
 // Type exports
 export type CreateProductInput = z.infer<typeof CreateProductSchema>;
