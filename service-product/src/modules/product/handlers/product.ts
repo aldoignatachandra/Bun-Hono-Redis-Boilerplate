@@ -55,37 +55,32 @@ productRoutes.get('/products', async c => {
     const search = c.req.query('search');
     const minPrice = c.req.query('minPrice') ? parseFloat(c.req.query('minPrice')!) : undefined;
     const maxPrice = c.req.query('maxPrice') ? parseFloat(c.req.query('maxPrice')!) : undefined;
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '10');
+    const offset = (page - 1) * limit;
 
     const getProductQuery = Container.get(GetProductQuery);
 
-    let products;
-    if (onlyDeleted) {
-      products = await getProductQuery.executeDeletedByOwner(user.sub);
-    } else if (includeDeleted) {
-      products = await getProductQuery.executeByOwnerWithDeleted(user.sub);
-    } else {
-      products = await getProductQuery.executeUserProductsOptimized(user.sub);
-    }
-
-    // Apply additional filters if provided
-    if (search) {
-      products = await getProductQuery.executeSearch(search, { includeDeleted, onlyDeleted });
-    }
-
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      products = await getProductQuery.executeByPriceRange(
-        { min: minPrice, max: maxPrice },
-        { includeDeleted, onlyDeleted }
-      );
-    }
+    const products = await getProductQuery.executeWithFilters({
+      ownerId: user.sub,
+      search,
+      minPrice,
+      maxPrice,
+      includeDeleted,
+      onlyDeleted,
+      limit,
+      offset,
+    });
 
     return c.json({
-      products,
+      data: products,
       meta: {
         includeDeleted,
         onlyDeleted,
         search,
         priceRange: { min: minPrice, max: maxPrice },
+        page,
+        limit,
         count: products.length,
       },
     });

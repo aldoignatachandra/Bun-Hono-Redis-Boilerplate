@@ -1,6 +1,6 @@
 import { Service } from 'typedi';
-import { UserEventPublisher } from '../events/UserEventPublisher';
-import { UserRepository } from '../repositories/UserRepository';
+import { UserEventPublisher } from '../../events/UserEventPublisher';
+import { UserRepository } from '../UserRepository';
 
 @Service()
 export class RestoreUserCommand {

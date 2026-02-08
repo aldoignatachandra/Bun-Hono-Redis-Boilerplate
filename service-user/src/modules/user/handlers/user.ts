@@ -30,7 +30,6 @@ userRoutes.post('/login', async c => {
     const body = await c.req.json();
     const validatedData = LoginSchema.parse(body);
 
-    const getUserQuery = Container.get(GetUserQuery);
     const userRepository = Container.get(UserRepository);
     const user = await userRepository.findByEmailForAuth(validatedData.email);
 
@@ -86,14 +85,29 @@ userRoutes.post('/admin/users', async c => {
   }
 });
 
-// Get users (admin only) - simplified for boilerplate
+// Get users (admin only)
 userRoutes.get('/admin/users', auth, requireRole('ADMIN'), async c => {
   try {
-    // This is a simplified version for the boilerplate
-    // In a real application, you would implement proper pagination and filtering
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '10');
+    const includeDeleted = c.req.query('includeDeleted') === 'true';
+
+    const offset = (page - 1) * limit;
+
+    const userRepository = Container.get(UserRepository);
+    const users = await userRepository.findAll({
+      includeDeleted,
+      limit,
+      offset,
+    });
+
     return c.json({
-      message: 'User listing endpoint - implement pagination and filtering as needed',
-      users: [],
+      data: users,
+      meta: {
+        page,
+        limit,
+        count: users.length,
+      },
     });
   } catch (error) {
     return c.text('Failed to fetch users', 500);

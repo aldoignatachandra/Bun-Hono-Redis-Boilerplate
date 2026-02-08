@@ -2,67 +2,65 @@
 
 ## 📋 Executive Summary
 
-This is a simplified microservices boilerplate using modern technologies optimized for performance and ease of use. The implementation showcases the CQRS (Command Query Responsibility Segregation) pattern with event-driven communication through Kafka, providing a clean foundation for building distributed systems without unnecessary complexity.
+This is a **high-performance, scalable microservices boilerplate** built with modern technologies. It implements the **CQRS (Command Query Responsibility Segregation)** pattern and **Event-Driven Architecture** using Apache Kafka.
+
+Designed for efficiency and developer experience, it features **Bun** for ultra-fast runtime performance, **Hono** for lightweight HTTP handling, and **Drizzle ORM** for type-safe, optimized database interactions.
 
 ## 🛠️ Technology Stack
 
 ### ⚡ Runtime & Web Framework
 
-- **🥤 Bun**: Ultra-fast JavaScript runtime with built-in bundler, test runner, and package manager
-- **🔥 Hono**: Lightweight, fast web framework with TypeScript-first approach and middleware support
+- **🥤 Bun**: Ultra-fast JavaScript runtime, bundler, test runner, and package manager (v1.1+).
+- **🔥 Hono**: Fast, lightweight, web-standard framework with first-class TypeScript support.
 
 ### 🏗️ Architecture Patterns
 
-- **🔄 CQRS**: Separation of command (write) and query (read) operations for optimized data handling
-- **📡 Event-Driven Architecture**: Asynchronous communication via Kafka events
-- **🎯 Domain-Driven Design (DDD)**: Clear bounded contexts with user and product services
-- **💉 Dependency Injection**: TypeDI with reflect-metadata for clean service composition
+- **🔄 CQRS**: Distinct separation of Write (Command) and Read (Query) models for scalability.
+- **📡 Event-Driven**: Asynchronous service-to-service communication via **Kafka**.
+- **🎯 DDD (Domain-Driven Design)**: Clear bounded contexts (`User`, `Product`, `Auth`).
+- **💉 Dependency Injection**: **TypeDI** for loose coupling and testability.
 
 ### 🗄️ Data Layer
 
-- **🐘 PostgreSQL**: Primary data store with ACID compliance and advanced JSON support
-- **🔮 Drizzle ORM**: Type-safe database access with migrations and query optimization
-- **🔗 Connection Pooling**: Configurable pool settings for optimal performance
+- **🐘 PostgreSQL**: Robust, ACID-compliant relational database.
+- **🔮 Drizzle ORM**: TypeScript-first ORM with zero runtime overhead and SQL-like syntax.
+- **⚡ Optimization**:
+  - **Pagination**: All list endpoints support `limit` and `offset`.
+  - **Filtering**: efficient DB-level filtering (no in-memory processing).
+  - **Paranoid Deletes**: Soft-delete support with `deletedAt` columns.
 
-### 📨 Messaging Infrastructure
+### 📨 Messaging
 
-- **🎭 Apache Kafka**: Distributed streaming platform with 2-broker cluster (KRaft mode)
-- **📜 KafkaJS**: Modern Node.js client with producer/consumer abstractions
-- **🛡️ Reliability Patterns**: Batching, retries with exponential backoff, and Dead Letter Queues (DLQ)
+- **🎭 Apache Kafka**: Distributed event streaming (KRaft mode - no Zookeeper).
+- **📜 KafkaJS**: Robust Node.js client with retries, batching, and DLQ support.
 
-### 🔐 Security & Authentication
+### 🔐 Security
 
-- **🎫 JWT (JSON Web Tokens)**: Stateless authentication with configurable expiration
-- **👥 RBAC (Role-Based Access Control)**: ADMIN and USER roles with endpoint protection
-- **🔑 Password Hashing**: bcrypt for secure password storage
+- **🎫 JWT**: Stateless authentication.
+- **🛡️ RBAC**: Role-Based Access Control (`ADMIN`, `USER`).
+- **🔑 Bcrypt**: Secure password hashing.
 
-### 💻 Development Experience
-
-- **📘 TypeScript**: End-to-end type safety with strict configuration
-- **⚡ Hot Reload**: Instant feedback during development
-- **📝 Structured Logging**: Pino logger with JSON output for production monitoring
-- **⚙️ Environment Management**: Comprehensive .env configuration
+---
 
 ## 🏛️ System Architecture
-
-### High-Level Overview
 
 ```mermaid
 graph TB
     subgraph "Client Layer"
-        A[📱 Client Apps] --> C[🌐 API Gateway/LB]
+        A[📱 Client Apps] --> C[🌐 API Gateway (LB)]
         B[🖥️ Admin Panel] --> C
     end
 
     subgraph "Service Layer"
-        C --> D[👤 User Service<br/>Port 3101]
-        C --> E[📦 Product Service<br/>Port 3102]
-        D --> F[🎭 Kafka Cluster]
-        E --> F
+        C --> D[👤 User Service<br/>:3101]
+        C --> E[📦 Product Service<br/>:3102]
+        C --> H[🔐 Auth Service<br/>:3100]
+        D <--> F[🎭 Kafka Cluster]
+        E <--> F
     end
 
     subgraph "Data Layer"
-        D --> G[🐘 PostgreSQL Database]
+        D --> G[🐘 PostgreSQL]
         E --> G
     end
 
@@ -73,459 +71,191 @@ graph TB
     style E fill:#e0f2f1
     style F fill:#fce4ec
     style G fill:#e1f5fe
+    style H fill:#fff9c4
 ```
 
-### 🎯 Service Boundaries
-
-#### 👤 User Service (Port 3101)
-
-- **🎯 Responsibility**: User management, authentication, and authorization
-- **🔒 Access Control**: ADMIN role for user management operations
-- **✨ Key Features**:
-  - User registration and management
-  - JWT token generation and validation
-  - Role-based access control
-  - User event publishing to Kafka
-
-#### 📦 Product Service (Port 3102)
-
-- **🎯 Responsibility**: Product catalog management and operations
-- **🔒 Access Control**: USER role for product CRUD operations
-- **✨ Key Features**:
-  - Product creation, retrieval, update, and deletion
-  - Owner-based access control
-  - Product event publishing to Kafka
-  - Cross-service communication via events
-
-### 🔄 Data Flow Patterns
-
-#### ✍️ Command Flow (Write Operations)
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API
-    participant Auth
-    participant Command
-    participant DB
-    participant Kafka
-
-    Client->>API: HTTP Request
-    API->>Auth: Validate Token
-    Auth->>Command: Process Business Logic
-    Command->>DB: Persist Data
-    Command->>Kafka: Publish Event
-    Kafka->>Client: Response
-```
-
-#### 👁️ Query Flow (Read Operations)
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API
-    participant Auth
-    participant Query
-    participant DB
-
-    Client->>API: HTTP Request
-    API->>Auth: Validate Token
-    Auth->>Query: Retrieve Data
-    Query->>DB: Query Optimized Views
-    DB->>Client: Response
-```
-
-#### 📡 Event Flow (Async Communication)
-
-```mermaid
-sequenceDiagram
-    participant Producer
-    participant Kafka
-    participant Consumer
-    participant DLQ
-
-    Producer->>Kafka: Publish Event
-    Kafka->>Consumer: Deliver Event
-    Consumer->>Consumer: Process with Idempotency
-
-    alt Processing Fails
-        Consumer->>Kafka: Retry with Backoff
-        Kafka->>DLQ: Move to Dead Letter Queue
-    end
-```
-
-## 📁 Project Structure
-
-```
-bun-hono-kafka-cqrs/
-├── apps/                          # Microservice applications
-│   ├── user-service/              # User management service
-│   │   ├── src/
-│   │   │   ├── app.ts            # Hono application bootstrap
-│   │   │   ├── routes/           # HTTP route definitions
-│   │   │   │   ├── auth.ts       # Authentication endpoints
-│   │   │   │   └── admin.ts      # Admin-only endpoints
-│   │   │   ├── commands/         # Command handlers (write operations)
-│   │   │   ├── queries/          # Query handlers (read operations)
-│   │   │   ├── services/         # Business logic services
-│   │   │   ├── repositories/     # Data access layer
-│   │   │   ├── dto/              # Data Transfer Objects
-│   │   │   ├── events/           # Event producers
-│   │   │   └── consumers/        # Event consumers
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── bunfig.toml
-│   └── product-service/          # Product management service
-│       ├── [Similar structure as user-service]
-│       ├── src/
-│       │   ├── app.ts
-│       │   ├── routes/
-│       │   │   ├── auth.ts
-│       │   │   └── products.ts
-│       │   ├── commands/
-│       │   ├── queries/
-│       │   ├── services/
-│       │   ├── repositories/
-│       │   ├── dto/
-│       │   ├── events/
-│       │   └── consumers/
-│       ├── package.json
-│       ├── tsconfig.json
-│       └── bunfig.toml
-├── packages/                      # Shared packages
-│   ├── common/                    # Common utilities and types
-│   │   ├── src/
-│   │   │   ├── auth.ts           # JWT middleware and helpers
-│   │   │   ├── db.ts             # Database client singleton
-│   │   │   ├── kafka.ts          # Kafka client factory
-│   │   │   ├── logger.ts         # Pino logger configuration
-│   │   │   ├── validation.ts     # Zod schemas
-│   │   │   ├── di.ts             # Dependency injection setup
-│   │   │   ├── types.ts          # Shared TypeScript types
-│   │   │   ├── config/           # Configuration utilities
-│   │   │   │   ├── loader.ts
-│   │   │   │   ├── validator.ts
-│   │   │   │   └── types.ts
-│   │   │   └── index.ts
-│   │   ├── package.json
-│   │   └── tsconfig.json
-│   └── drizzle/                    # Database schema and migrations
-│       ├── src/
-│       │   ├── schema/           # Drizzle schema definitions
-│       │   ├── migrations/        # Database migration files
-│       │   ├── repositories/      # Base repository classes
-│       │   └── db/              # Database connection management
-│       ├── drizzle.config.ts       # Drizzle configuration
-│       ├── package.json
-│       └── tsconfig.json
-├── infra/                         # Infrastructure configuration
-│   ├── docker/
-│   │   ├── compose/
-│   │   │   ├── dev.yml
-│   │   │   ├── staging.yml
-│   │   │   └── prod.yml
-│   │   └── k8s/
-│   │       ├── base/
-│   │       ├── dev/
-│   │       ├── staging/
-│   │       └── prod/
-│   └── kafka/
-│       └── docker-compose.yml    # Kafka cluster configuration
-├── scripts/                       # Automation scripts
-│   ├── build.sh
-│   ├── deploy.sh
-│   ├── migrate.sh
-│   └── test.sh
-├── .github/                       # GitHub Actions workflows
-│   └── workflows/
-│       ├── ci.yml
-│       ├── deploy-staging.yml
-│       └── deploy-prod.yml
-├── config/                        # Global configurations
-│   ├── base.json           # Base configuration shared across environments
-│   ├── dev.json            # Development-specific overrides
-│   ├── staging.json         # Staging-specific overrides
-│   └── prod.json            # Production-specific overrides
-├── .env.example                   # Environment variables template
-├── .env.dev                      # Development environment variables
-├── .env.staging                  # Staging environment variables
-├── .env.prod                     # Production environment variables
-├── bun.lockb                     # Bun lock file
-├── package.json                   # Root package configuration
-├── tsconfig.json                  # TypeScript configuration
-├── 00_README.md                  # This file
-├── 01_BACKEND_CQRS.md            # Backend implementation guide
-├── 02_KAFKA_SERVICES.md          # Kafka services guide
-└── 03_IMPLEMENTATION_PLAN.md        # Multi-environment implementation plan
-```
-
-## 🎯 Key Architectural Decisions
-
-### 🔄 CQRS Implementation Rationale
-
-The CQRS pattern provides several benefits for this microservices architecture:
-
-1. **📈 Scalability**: Read and write operations can be optimized independently
-2. **⚡ Performance**: Query models can be denormalized for faster reads
-3. **🔧 Flexibility**: Different data storage strategies for commands and queries
-4. **🎯 Separation of Concerns**: Clear distinction between business operations and data retrieval
-
-### 📡 Event-Driven Communication Benefits
-
-1. **🔗 Decoupling**: Services communicate through events without direct dependencies
-2. **🛡️ Resilience**: Asynchronous processing prevents cascading failures
-3. **📈 Scalability**: Event consumers can scale independently
-4. **📊 Auditability**: All state changes are recorded as events
-5. **🔧 Flexibility**: New consumers can be added without modifying producers
-
-### 🛠️ Technology Selection Justification
-
-#### 🥤 Bun over Node.js
-
-- 3x faster startup time
-- 20-30% faster request processing
-- Built-in bundler and test runner
-- Native TypeScript support
-- Reduced dependency footprint
-
-#### 🔥 Hono over Express
-
-- Better TypeScript integration
-- Faster routing and middleware execution
-- Modern API design with async/await support
-- Smaller bundle size
-- Built-in validation capabilities
-
-#### 🔮 Drizzle over TypeORM
-
-- Type-safe database access
-- Better migration management
-- Improved query performance
-- Excellent developer experience
-- Built-in connection pooling
-
-#### 🎭 Kafka over RabbitMQ
-
-- Higher throughput and scalability
-- Better durability guarantees
-- Native support for event sourcing
-- Superior replay capabilities
-- Better ecosystem for microservices
-
-## ⚡ Performance Considerations
-
-### 🗄️ Database Optimization
-
-- Connection pooling with configurable limits
-- Query optimization through Drizzle's query engine
-- Proper indexing strategies for frequently accessed data
-- Read replica support for query-heavy operations
-
-### 🎭 Kafka Optimization
-
-- Batch message processing for improved throughput
-- Compression for reduced network overhead
-- Partitioning strategies for parallel processing
-- Consumer group management for load distribution
-- Producer idempotency for exactly-once semantics
-
-### 🚀 Application Performance
-
-- Lazy loading of dependencies
-- Efficient middleware ordering
-- Response caching where appropriate
-- Memory-efficient event processing
-
-## 🔐 Security Implementation
-
-### 🔑 Authentication Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant API
-    participant DB
-    participant JWT
-
-    User->>API: Submit Credentials
-    API->>DB: Validate Credentials
-    DB->>API: User Data
-    API->>JWT: Generate Token
-    JWT->>User: Return Token
-```
-
-### 🛡️ Authorization Implementation
-
-- JWT middleware extracts and validates tokens
-- Role-based middleware protects sensitive endpoints
-- Resource ownership validation for user data
-- Principle of least privilege enforced
-
-### 🔒 Data Protection
-
-- Password hashing with bcrypt
-- Environment variable encryption for secrets
-- HTTPS enforcement in production
-- Input validation and sanitization
-
-## 📊 Monitoring and Observability
-
-### 📝 Logging Strategy
-
-- Structured JSON logging with Pino
-- Correlation IDs for request tracing
-- Log levels for different environments
-- Centralized log aggregation ready
-
-### 💚 Health Checks
-
-- `/health` endpoint for service availability
-- Database connectivity verification
-- Kafka cluster connectivity status
-- Graceful degradation handling
-
-### 📈 Metrics Collection
-
-- Request/response timing
-- Error rates and types
-- Kafka message processing metrics
-- Database query performance
-
-## 🔄 Development Workflow
-
-### 💻 Local Development Setup
-
-1. Clone repository and install dependencies
-2. Configure environment variables
-3. Start Kafka cluster with Docker Compose
-4. Initialize database with migrations and seed data
-5. Run services in development mode with hot reload
-
-### 🧪 Testing Strategy
-
-- Unit tests for business logic
-- Integration tests for API endpoints
-- Contract tests for Kafka events
-- End-to-end tests for critical user flows
-
-### 🚀 Deployment Considerations
-
-- Containerized services with Docker
-- Environment-specific configurations
-- Database migration automation
-- Rolling deployment strategies
-- Health check integration
-
-## 🚀 Quick Start Guide
-
-### 📋 Prerequisites
-
-- 🥤 Bun 1.1.0 or later
-- 🐳 Docker and Docker Compose
-- 🐘 PostgreSQL 14 or later
-
-### ⚙️ Setup Commands
-
-```bash
-# Clone repository
-git clone https://github.com/your-org/bun-hono-kafka-cqrs.git
-cd bun-hono-kafka-cqrs
-
-# Install dependencies
-bun install
-
-# Setup git hooks for code formatting
-bun run setup:hooks
-
-# Start Kafka cluster
-docker compose -f infra/kafka/docker-compose.yml up -d
-
-# Run database migrations
-bun run db:migrate
-
-# Seed database (optional)
-bun run db:seed
-
-# Start services in development mode
-bun run dev
-```
-
-### 🌐 API Endpoints
-
-#### 👤 User Service (Port 3101)
-
-- `POST /auth/login` - User authentication
-- `POST /auth/admin/users` - Create user (ADMIN only)
-- `GET /auth/me` - Get current user info
-- `GET /auth/health` - Health check
-
-#### 📦 Product Service (Port 3102)
-
-- `POST /products` - Create product
-- `GET /products` - Get user's products
-- `PATCH /products/:id` - Update product (owner only)
-- `DELETE /products/:id` - Delete product (owner only)
-- `GET /products/health` - Health check
-
-## 🌍 Environment Configuration
-
-### 🛠️ Development Environment
-
-- Local development with hot reload
-- Verbose logging
-- Mock external services when needed
-- Small resource allocation
-
-### 🧪 Staging Environment
-
-- Production-like environment for testing
-- Real external service integrations
-- Production data subset (anonymized)
-- Medium resource allocation
-- Full monitoring stack
-
-### 🚀 Production Environment
-
-- Live environment for end users
-- Optimized for performance and security
-- Full resource allocation
-- Comprehensive monitoring and alerting
-- Strict access controls
-
-## 🌐 Multi-Environment Support
-
-This boilerplate includes comprehensive support for development, staging, and production environments with:
-
-- Environment-specific configuration files
-- Separate Docker Compose configurations
-- CI/CD pipeline with GitHub Actions
-- Environment-specific secrets management
-- Database migration strategies
-- Kafka topic management
-- Monitoring and observability per environment
-
-## 🎨 Code Style
-
-This project uses Prettier to maintain consistent code formatting across all files. Please refer to the [Code Style Guide](docs/CODE_STYLE.md) for detailed information on:
-
-- Formatting rules and configuration
-- Setup instructions for your editor
-- Usage of formatting scripts
-- File exclusions and troubleshooting
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Format your code using `bun run format`
-5. Submit a pull request
-6. Follow coding standards and practices
-
-## 📜 License
-
-MIT License - feel free to use this boilerplate for your projects!
+### 🔄 Data Flow (CQRS)
+
+1.  **Command (Write)**:
+    - User sends `POST /products`.
+    - API validates token & payload.
+    - Command Handler persists data to DB.
+    - **Event Published**: `ProductCreated` -> Kafka.
+    - Response returned immediately.
+
+2.  **Query (Read)**:
+    - User sends `GET /products?search=laptop`.
+    - Query Handler executes **Optimized SQL** via Drizzle.
+    - Results returned with pagination metadata.
 
 ---
 
-This simplified boilerplate provides a clean foundation for building microservices with modern JavaScript/TypeScript technologies, emphasizing simplicity and essential functionality without unnecessary complexity.
+## 📁 Project Structure
+
+```bash
+bun-hono-kafkajs-boilerplate/
+├── infra/                 # Docker & Kafka config
+├── service-user/          # 👤 User Management & Auth
+│   ├── src/
+│   │   ├── modules/user/
+│   │   │   ├── handlers/  # HTTP Controllers
+│   │   │   ├── repositories/ # Drizzle & Commands/Queries
+│   │   │   └── domain/    # Schema & Types
+├── service-product/       # 📦 Product Catalog
+│   ├── src/
+│   │   ├── modules/product/
+│   │   │   ├── handlers/
+│   │   │   └── repositories/
+├── service-auth/          # 🔐 Centralized Auth Gateway
+└── .trae/                 # 🤖 AI Rules & Guidelines
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Bun** (v1.1+)
+- **Docker & Docker Compose**
+
+### 1. Installation
+
+```bash
+# Clone the repo
+git clone https://github.com/your-username/bun-hono-kafkajs-boilerplate.git
+cd bun-hono-kafkajs-boilerplate
+
+# Install dependencies for all services
+cd service-user && bun install && cd ..
+cd service-product && bun install && cd ..
+cd service-auth && bun install && cd ..
+```
+
+### 2. Environment Setup
+
+Copy `.env.example` to `.env` in **EACH** service directory (`service-user`, `service-product`, `service-auth`).
+
+**Crucial Setting for Local Dev:**
+Ensure `KAFKA_BROKERS=localhost:19092,localhost:29092` in all `.env` files.
+
+### 3. Start Infrastructure
+
+```bash
+# Start Postgres & Kafka
+docker compose -f infra/docker/compose/dev.yml up -d
+```
+
+### 4. Database Migration & Seeding
+
+```bash
+# Push schema and seed Admin user
+cd service-user
+bun run db:push
+bun run db:seed  # Creates admin@example.com / admin
+cd ..
+
+cd service-product
+bun run db:push
+cd ..
+```
+
+### 5. Run Services
+
+Open 3 terminals:
+
+```bash
+# Terminal 1
+cd service-user && bun run dev
+# Terminal 2
+cd service-product && bun run dev
+# Terminal 3
+cd service-auth && bun run dev
+```
+
+---
+
+## 🧪 API Usage Guide
+
+### Authentication
+
+**Login (Get Token)**
+
+```bash
+curl -X POST http://localhost:3101/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "admin"}'
+```
+
+_Response:_ `{ "token": "eyJ...", "user": { ... } }`
+
+### Product Management (Optimized)
+
+**Get Products (Filtered & Paginated)**
+
+```bash
+curl "http://localhost:3102/products?page=1&limit=5&search=laptop&minPrice=1000" \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+**Parameters:**
+
+- `page`: Page number (default: 1)
+- `limit`: Items per page (default: 10)
+- `search`: Filter by name (case-insensitive)
+- `minPrice` / `maxPrice`: Price range filter
+- `includeDeleted`: Include soft-deleted items (boolean)
+
+### User Management (Admin Only)
+
+**List Users**
+
+```bash
+curl "http://localhost:3101/admin/users?page=1&limit=20" \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+---
+
+## 🛠️ Best Practices Implemented
+
+1.  **N+1 Prevention**: All repository methods use optimized Drizzle queries, avoiding loops for data fetching.
+2.  **Pagination**: Mandatory for all list endpoints to ensure scalability.
+3.  **Clean Architecture**: Separation of `Handlers` (HTTP), `Commands` (Write Logic), `Queries` (Read Logic), and `Repositories` (Data Access).
+4.  **Type Safety**: Full TypeScript strict mode compliance.
+5.  **Validation**: Zod schemas for all request bodies.
+
+## 🤝 Contributing
+
+Please follow the rules in `.trae/` when contributing:
+
+- **`universal_code_style.md`**: Formatting & Naming.
+- **`backend_best_practices.md`**: Architecture & Performance.
+
+### 🛑 Git Workflow & Commit Rules
+
+This project uses **Husky** and **Commitlint** to enforce strict commit message conventions.
+
+**Allowed Commit Types:**
+
+- `update:` - Use for updates to existing code, dependencies, or documentation.
+- `add:` - Use when adding new features, files, or modules.
+- `fix:` - Use when fixing bugs or resolving issues.
+
+**Example Valid Commits:**
+
+```bash
+git commit -m "add: new product search filter"
+git commit -m "update: readme documentation"
+git commit -m "fix: login authentication error"
+```
+
+**Invalid Commits (Will Fail):**
+
+```bash
+git commit -m "fixed login"       # ❌ Missing prefix
+git commit -m "feat: new login"   # ❌ 'feat' is not allowed (use 'add')
+git commit -m "wip"               # ❌ Random messages not allowed
+```
+
+> The pre-commit hook is currently configured to skip tests (`bun test` is commented out) but will run linter checks in the future.

@@ -23,9 +23,69 @@ export class ProductRepository {
       .where(and(eq(products.ownerId, ownerId), isNull(products.deletedAt)));
   }
 
-  async findAll(includeDeleted = false): Promise<Product[]> {
+  async findAll(
+    options: {
+      includeDeleted?: boolean;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<Product[]> {
+    const { includeDeleted = false, limit = 10, offset = 0 } = options;
     const where = includeDeleted ? undefined : isNull(products.deletedAt);
-    return this.db.select().from(products).where(where);
+    return this.db.select().from(products).where(where).limit(limit).offset(offset);
+  }
+
+  async findWithFilters(options: {
+    ownerId?: string;
+    search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    includeDeleted?: boolean;
+    onlyDeleted?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<Product[]> {
+    const {
+      ownerId,
+      search,
+      minPrice,
+      maxPrice,
+      includeDeleted = false,
+      onlyDeleted = false,
+      limit = 10,
+      offset = 0,
+    } = options;
+
+    const conditions = [];
+
+    if (ownerId) {
+      conditions.push(eq(products.ownerId, ownerId));
+    }
+
+    if (onlyDeleted) {
+      conditions.push(isNotNull(products.deletedAt));
+    } else if (!includeDeleted) {
+      conditions.push(isNull(products.deletedAt));
+    }
+
+    if (search) {
+      conditions.push(like(products.name, `%${search}%`));
+    }
+
+    if (minPrice !== undefined) {
+      conditions.push(gte(products.price, minPrice));
+    }
+
+    if (maxPrice !== undefined) {
+      conditions.push(lte(products.price, maxPrice));
+    }
+
+    return this.db
+      .select()
+      .from(products)
+      .where(and(...conditions))
+      .limit(limit)
+      .offset(offset);
   }
 
   async create(data: NewProduct): Promise<Product> {

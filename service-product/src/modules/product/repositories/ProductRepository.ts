@@ -35,38 +35,31 @@ export class ProductRepository {
     return product as unknown as ProductResponse | null;
   }
 
+  async findWithFilters(options: {
+    ownerId?: string;
+    search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    includeDeleted?: boolean;
+    onlyDeleted?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<ProductResponse[]> {
+    const products = await this.drizzleProductRepo.findWithFilters(options);
+    return products as unknown as ProductResponse[];
+  }
+
   async findByOwner(
     ownerId: string,
     options: ProductRepositoryOptions = {}
   ): Promise<ProductResponse[]> {
-    // drizzleRepo.findByOwnerId signature: (ownerId: string) -> returns all active (not deleted)
-    // Wait, findByOwnerId implementation in drizzle:
-    // return this.db.select().from(products).where(and(eq(products.ownerId, ownerId), isNull(products.deletedAt)));
-    // So it ONLY returns active.
-
-    // If we want includeDeleted, we can't use findByOwnerId from drizzle repo as is.
-    // But since this is a boilerplate fix and I can't easily change drizzle repo without rebuilding everything again,
-    // I'll stick to what's available or use findAll and filter in memory (inefficient but works for now).
-
-    // Actually, let's look at findAll in drizzle repo:
-    // async findAll(includeDeleted = false)
-
-    const allProducts = await this.drizzleProductRepo.findAll(
-      options.includeDeleted || options.onlyDeleted
-    );
-
-    let filtered = allProducts.filter(p => p.ownerId === ownerId);
-
-    if (options.onlyDeleted) {
-      filtered = filtered.filter(p => p.deletedAt !== null);
-    } else if (options.onlyActive) {
-      // or default if not includeDeleted
-      filtered = filtered.filter(p => p.deletedAt === null);
-    } else if (!options.includeDeleted) {
-      filtered = filtered.filter(p => p.deletedAt === null);
-    }
-
-    return filtered as unknown as ProductResponse[];
+    return this.findWithFilters({
+      ownerId,
+      includeDeleted: options.includeDeleted,
+      onlyDeleted: options.onlyDeleted,
+      limit: options.limit,
+      offset: options.offset,
+    });
   }
 
   async update(
@@ -119,29 +112,25 @@ export class ProductRepository {
     return this.findByOwner(ownerId, { ...options, includeDeleted: true });
   }
 
-  async findDeletedOnly(_options: ProductRepositoryOptions = {}): Promise<ProductResponse[]> {
-    const all = await this.drizzleProductRepo.findAll(true);
-    return all.filter(p => p.deletedAt !== null) as unknown as ProductResponse[];
+  async findDeletedOnly(options: ProductRepositoryOptions = {}): Promise<ProductResponse[]> {
+    return this.findWithFilters({
+      onlyDeleted: true,
+      limit: options.limit,
+      offset: options.offset,
+    });
   }
 
   async searchProducts(
     query: string,
     options: ProductRepositoryOptions = {}
   ): Promise<ProductResponse[]> {
-    const all = await this.drizzleProductRepo.findAll(
-      options.includeDeleted || options.onlyDeleted
-    );
-    const lowerQuery = query.toLowerCase();
-
-    let filtered = all.filter(p => p.name.toLowerCase().includes(lowerQuery));
-
-    if (options.onlyDeleted) {
-      filtered = filtered.filter(p => p.deletedAt !== null);
-    } else if (!options.includeDeleted) {
-      filtered = filtered.filter(p => p.deletedAt === null);
-    }
-
-    return filtered as unknown as ProductResponse[];
+    return this.findWithFilters({
+      search: query,
+      includeDeleted: options.includeDeleted,
+      onlyDeleted: options.onlyDeleted,
+      limit: options.limit,
+      offset: options.offset,
+    });
   }
 
   async searchProductsWithDeleted(
@@ -155,25 +144,14 @@ export class ProductRepository {
     range: { min?: number; max?: number },
     options: ProductRepositoryOptions = {}
   ): Promise<ProductResponse[]> {
-    const all = await this.drizzleProductRepo.findAll(
-      options.includeDeleted || options.onlyDeleted
-    );
-
-    let filtered = all;
-    if (range.min !== undefined) {
-      filtered = filtered.filter(p => p.price >= range.min!);
-    }
-    if (range.max !== undefined) {
-      filtered = filtered.filter(p => p.price <= range.max!);
-    }
-
-    if (options.onlyDeleted) {
-      filtered = filtered.filter(p => p.deletedAt !== null);
-    } else if (!options.includeDeleted) {
-      filtered = filtered.filter(p => p.deletedAt === null);
-    }
-
-    return filtered as unknown as ProductResponse[];
+    return this.findWithFilters({
+      minPrice: range.min,
+      maxPrice: range.max,
+      includeDeleted: options.includeDeleted,
+      onlyDeleted: options.onlyDeleted,
+      limit: options.limit,
+      offset: options.offset,
+    });
   }
 
   async findByPriceRangeWithDeleted(

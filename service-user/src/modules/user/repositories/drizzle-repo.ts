@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { drizzleDb } from '../db/connection';
-import { users, type NewUser, type UpdateUser, type User } from '../schema/entities/users';
+import { drizzleDb } from '../../../db/connection';
+import { users, type NewUser, type UpdateUser, type User } from '../domain/schema';
 
 export class UserRepository {
   private db = drizzleDb;
@@ -23,9 +23,16 @@ export class UserRepository {
     return result[0] || null;
   }
 
-  async findAll(includeDeleted = false): Promise<User[]> {
+  async findAll(
+    options: {
+      includeDeleted?: boolean;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<User[]> {
+    const { includeDeleted = false, limit = 10, offset = 0 } = options;
     const where = includeDeleted ? undefined : isNull(users.deletedAt);
-    return this.db.select().from(users).where(where);
+    return this.db.select().from(users).where(where).limit(limit).offset(offset);
   }
 
   async create(data: NewUser): Promise<User> {

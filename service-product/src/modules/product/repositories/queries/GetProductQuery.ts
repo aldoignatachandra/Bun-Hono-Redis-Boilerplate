@@ -57,4 +57,17 @@ export class GetProductQuery {
   ) {
     return this.productRepository.findByPriceRangeWithDeleted(priceRange, options);
   }
+
+  async executeWithFilters(options: {
+    ownerId?: string;
+    search?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    includeDeleted?: boolean;
+    onlyDeleted?: boolean;
+    limit?: number;
+    offset?: number;
+  }) {
+    return this.productRepository.findWithFilters(options);
+  }
 }

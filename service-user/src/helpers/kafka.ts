@@ -1,5 +1,5 @@
 import { Consumer, Kafka, logLevel, Producer } from 'kafkajs';
-import { configLoader } from './config/loader';
+import { configLoader } from '../config/loader';
 
 // Kafka client configuration
 export const kafka = new Kafka({
@@ -49,8 +49,8 @@ export async function createProducer(): Promise<Producer> {
     console.warn('Kafka producer disconnected');
   });
 
-  producer.on('producer.network.request_timeout', payload => {
-    console.error('Producer request timeout', payload);
+  producer.on('producer.network.request_timeout', _payload => {
+    console.error('Producer request timeout');
   });
 
   await producer.connect();
@@ -75,7 +75,7 @@ export async function createConsumer(groupId: string): Promise<Consumer> {
     console.warn(`Kafka consumer disconnected (group: ${groupId})`);
   });
 
-  consumer.on('consumer.group_join', payload => {
+  consumer.on('consumer.group_join', _payload => {
     console.log(`Consumer joined group`, { groupId });
   });
 

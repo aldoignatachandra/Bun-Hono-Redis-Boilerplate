@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "bun run src/bin/server.ts",
+    "dev": "bun run index.ts",
     "dev:watch": "tsc --watch",
     "start": "bun dist/bin/server.js",
     "test": "bun test",
