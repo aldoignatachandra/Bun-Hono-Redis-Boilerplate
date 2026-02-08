@@ -23,7 +23,7 @@ export const CreateProductSchema = BaseProductSchema.pick({
 export const UpdateProductSchema = BaseProductSchema.pick({
   name: true,
   price: true,
-  ownerId: true,
+  // ownerId is removed to prevent ownership transfer via update
 }).partial();
 
 // Type exports

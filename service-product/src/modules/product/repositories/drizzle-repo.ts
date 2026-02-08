@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, isNull, like, lte } from 'drizzle-orm';
 import { drizzleDb } from '../../../db/connection';
 import { products, type NewProduct, type Product, type UpdateProduct } from '../domain/schema';
 

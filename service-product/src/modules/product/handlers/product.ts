@@ -1,12 +1,12 @@
-import { auth } from '../../../middlewares/auth';
 import { Hono } from 'hono';
 import { Container } from 'typedi';
+import { auth } from '../../../middlewares/auth';
+import { CreateProductSchema, UpdateProductSchema } from '../domain/product';
 import { CreateProductCommand } from '../repositories/commands/CreateProductCommand';
 import { DeleteProductCommand } from '../repositories/commands/DeleteProductCommand';
 import { RestoreProductCommand } from '../repositories/commands/RestoreProductCommand';
 import { UpdateProductCommand } from '../repositories/commands/UpdateProductCommand';
 import { GetProductQuery } from '../repositories/queries/GetProductQuery';
-import { CreateProductSchema, UpdateProductSchema } from '../domain/product';
 
 // Define types for Hono context
 type User = {

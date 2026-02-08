@@ -1,13 +1,38 @@
-import { text, varchar } from 'drizzle-orm/pg-core';
+import { index, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { BaseParanoidEntity, createParanoidTable } from '../../../helpers/schema/base-table';
 import { roleEnum } from '../../../helpers/schema/enums';
 
 // User table schema
-export const users = createParanoidTable('users', {
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  password: text('password').notNull(),
-  role: roleEnum,
-});
+export const users = createParanoidTable(
+  'users',
+  {
+    email: varchar('email', { length: 255 }).notNull().unique(),
+    password: text('password').notNull(),
+    role: roleEnum,
+  },
+  table => ({
+    roleIdx: index('users_role_idx').on(table.role),
+  })
+);
+
+// User Session Schema (Synced with service-auth)
+export const userSessions = createParanoidTable(
+  'user_sessions',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    token: text('token'),
+    ipAddress: varchar('ip_address', { length: 45 }),
+    userAgent: text('user_agent'),
+    deviceType: varchar('device_type', { length: 50 }),
+    expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }).notNull(),
+    lastUsedAt: timestamp('last_used_at', { mode: 'date', withTimezone: true }).defaultNow(),
+  },
+  table => ({
+    userIdIdx: index('user_sessions_user_id_idx').on(table.userId),
+  })
+);
 
 // TypeScript types for User entity
 export type User = typeof users.$inferSelect; // Select type

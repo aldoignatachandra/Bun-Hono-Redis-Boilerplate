@@ -6,7 +6,13 @@ import { ProductRepository } from '../ProductRepository';
 export class UpdateProductCommand {
   constructor(private productRepository: ProductRepository) {}
 
-  async execute(id: string, data: any, _ownerId: string) {
+  async execute(id: string, data: any, ownerId: string) {
+    // 1. Verify ownership
+    const existingProduct = await this.productRepository.findById(id);
+    if (!existingProduct || existingProduct.ownerId !== ownerId) {
+      throw new Error('Product not found or access denied');
+    }
+
     // Update product
     const product = await this.productRepository.update(id, data);
 

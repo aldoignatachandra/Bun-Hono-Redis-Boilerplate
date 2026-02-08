@@ -1,12 +1,20 @@
-import { integer, uuid, varchar } from 'drizzle-orm/pg-core';
+import { index, integer, uuid, varchar } from 'drizzle-orm/pg-core';
 import { BaseParanoidEntity, createParanoidTable } from '../../../helpers/schema/base-table';
 
 // Product table schema
-export const products = createParanoidTable('products', {
-  name: varchar('name', { length: 255 }).notNull(),
-  price: integer('price').notNull(),
-  ownerId: uuid('owner_id').notNull(),
-});
+export const products = createParanoidTable(
+  'products',
+  {
+    name: varchar('name', { length: 255 }).notNull(),
+    price: integer('price').notNull(),
+    ownerId: uuid('owner_id').notNull(),
+  },
+  table => ({
+    ownerIdIdx: index('products_owner_id_idx').on(table.ownerId),
+    nameIdx: index('products_name_idx').on(table.name),
+    priceIdx: index('products_price_idx').on(table.price),
+  })
+);
 
 // TypeScript types for Product entity
 export type Product = typeof products.$inferSelect; // Select type

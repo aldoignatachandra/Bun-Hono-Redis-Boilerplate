@@ -6,7 +6,7 @@ import { index, pgTable, PgTableWithColumns, timestamp, uuid } from 'drizzle-orm
 export function createParanoidTable<TName extends string>(
   name: TName,
   columns: any,
-  extraConfig?: any
+  extraConfig?: (table: any) => any
 ): any {
   return pgTable(
     name,
@@ -24,12 +24,15 @@ export function createParanoidTable<TName extends string>(
       // Custom columns
       ...columns,
     },
-    table => ({
-      // Paranoid index for efficient soft delete queries
-      paranoidIndex: index(`${name}_deleted_at_idx`).on(table.deletedAt),
-      // Additional indexes from extraConfig
-      ...extraConfig?.indexes,
-    })
+    table => {
+      const extraIndexes = extraConfig ? extraConfig(table) : {};
+      return {
+        // Paranoid index for efficient soft delete queries
+        paranoidIndex: index(`${name}_deleted_at_idx`).on(table.deletedAt),
+        // Additional indexes from extraConfig
+        ...extraIndexes,
+      };
+    }
   );
 }
 /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access */

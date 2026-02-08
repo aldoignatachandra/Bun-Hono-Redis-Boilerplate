@@ -1,9 +1,9 @@
-import { configLoader } from './config/loader';
-import { checkDatabaseHealth } from './db/connection';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { Container } from 'typedi';
+import { configLoader } from './config/loader';
+import { checkDatabaseHealth } from './db/connection';
 import productRoutes from './modules/product/handlers/product';
 
 const app = new Hono();

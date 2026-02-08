@@ -1,9 +1,8 @@
-import bcrypt from 'bcrypt';
 import { Hono } from 'hono';
 import { Container } from 'typedi';
 import { JWTPayload } from '../../../helpers/types';
-import { auth, generateToken, requireRole } from '../../../middlewares/auth';
-import { CreateUserSchema, LoginSchema } from '../domain/auth';
+import { auth, requireRole } from '../../../middlewares/auth';
+import { CreateUserSchema } from '../domain/auth';
 import { CreateUserCommand } from '../repositories/commands/CreateUserCommand';
 import { RestoreUserCommand } from '../repositories/commands/RestoreUserCommand';
 import { GetUserQuery } from '../repositories/queries/GetUserQuery';
@@ -23,44 +22,6 @@ declare module 'hono' {
 }
 
 const userRoutes = new Hono();
-
-// Login endpoint
-userRoutes.post('/login', async c => {
-  try {
-    const body = await c.req.json();
-    const validatedData = LoginSchema.parse(body);
-
-    const userRepository = Container.get(UserRepository);
-    const user = await userRepository.findByEmailForAuth(validatedData.email);
-
-    if (!user) {
-      return c.text('Invalid credentials', 401);
-    }
-
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(validatedData.password, user.password);
-    if (!isPasswordValid) {
-      return c.text('Invalid credentials', 401);
-    }
-
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    return c.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    return c.text('Invalid request', 400);
-  }
-});
 
 // Protected admin routes
 userRoutes.use('/admin/*', auth, requireRole('ADMIN'));
