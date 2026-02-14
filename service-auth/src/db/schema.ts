@@ -5,11 +5,17 @@ import { roleEnum } from '../helpers/schema/enums';
 // -----------------------------------------------------------------------------
 // USER MODEL (Read-Only Replica from service-user)
 // -----------------------------------------------------------------------------
-export const users = createParanoidTable('users', {
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  password: text('password').notNull(),
-  role: roleEnum,
-});
+export const users = createParanoidTable(
+  'users',
+  {
+    email: varchar('email', { length: 255 }).notNull().unique(),
+    password: text('password').notNull(),
+    role: roleEnum('role'),
+  },
+  table => ({
+    roleIdx: index('users_role_idx').on(table.role),
+  })
+);
 
 // TypeScript types for User entity
 export type User = typeof users.$inferSelect;

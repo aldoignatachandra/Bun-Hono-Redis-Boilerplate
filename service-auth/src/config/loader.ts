@@ -28,16 +28,22 @@ const ConfigSchema = z.object({
   services: z
     .object({
       userService: z.object({
-        port: z.number(),
+        port: z.coerce.number(),
       }),
       productService: z.object({
-        port: z.number(),
+        port: z.coerce.number(),
+      }),
+      authService: z.object({
+        port: z.coerce.number(),
       }),
     })
     .optional(),
   kafka: z.object({
     clientId: z.string(),
-    brokers: z.array(z.string()),
+    brokers: z.union([
+      z.array(z.string()),
+      z.string().transform(s => s.split(',').map(b => b.trim()))
+    ]),
     ssl: z.boolean(),
     sasl: z
       .object({
@@ -85,6 +91,12 @@ const ConfigSchema = z.object({
       encryptionEnabled: z.boolean(),
       keyRotationInterval: z.number(),
       auditLogging: z.boolean(),
+      systemAuth: z
+        .object({
+          username: z.string().optional(),
+          password: z.string().optional(),
+        })
+        .optional(),
     })
     .optional(),
   features: z

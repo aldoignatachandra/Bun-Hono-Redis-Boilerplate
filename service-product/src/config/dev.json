@@ -7,11 +7,12 @@
       "port": 3101
     },
     "productService": {
-      "port": 3102
+      "port": "${PORT}"
     }
   },
   "kafka": {
-    "brokers": ["localhost:19092", "localhost:29092"],
+    "brokers": "${KAFKA_BROKERS}",
+    "clientId": "${KAFKA_CLIENT_ID}",
     "ssl": false,
     "sasl": {
       "mechanism": "",

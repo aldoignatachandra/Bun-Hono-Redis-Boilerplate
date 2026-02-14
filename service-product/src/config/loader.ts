@@ -27,15 +27,18 @@ const ConfigSchema = z.object({
   }),
   services: z.object({
     userService: z.object({
-      port: z.number(),
+      port: z.coerce.number(),
     }),
     productService: z.object({
-      port: z.number(),
+      port: z.coerce.number(),
     }),
   }),
   kafka: z.object({
     clientId: z.string(),
-    brokers: z.array(z.string()),
+    brokers: z.union([
+      z.array(z.string()),
+      z.string().transform(s => s.split(',').map(b => b.trim()))
+    ]),
     ssl: z.boolean(),
     sasl: z
       .object({

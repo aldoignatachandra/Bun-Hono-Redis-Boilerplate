@@ -54,6 +54,18 @@ This document outlines mandatory technical requirements for backend development.
 - **Logging**:
   - Log errors with context (stack trace + input params) on the server side.
 
+## 5. Authentication & Security
+
+**Severity: Critical**
+
+- **Basic Auth Usage**:
+  - **User Login**: Use Database-backed validation (verify email/password hash). NEVER hardcode user credentials in `.env` for user login endpoints.
+  - **System/Internal Auth**: Use Environment Variable-backed validation (`SYSTEM_USER`, `SYSTEM_PASS`) for protecting internal admin/metric endpoints.
+  - **Security Controls**:
+    - Always use `crypto.timingSafeEqual` for comparing secrets to prevent timing attacks.
+    - Enforce HTTPS in production.
+    - Rate limit login endpoints to prevent brute force attacks.
+
 ## ✅ Implementation Checklist (AI Usage)
 
 Before finalizing code, the AI must verify:
@@ -63,3 +75,4 @@ Before finalizing code, the AI must verify:
 - [ ] Have I checked all usages of the modified function?
 - [ ] Are comments concise and focusing on "Why"? (No fluff).
 - [ ] Are types strict (no `any`)?
+- [ ] Is authentication implemented securely (timingSafeEqual, env vars for system auth)?

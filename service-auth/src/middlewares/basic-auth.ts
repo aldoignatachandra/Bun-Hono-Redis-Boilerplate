@@ -17,8 +17,10 @@ declare module 'hono' {
 }
 
 /**
- * Basic Auth Middleware
- * Extracts credentials from Authorization header, validates against DB,
+ * User Login Basic Auth Middleware
+ *
+ * Used specifically for the `/login` endpoint.
+ * Extracts credentials from Authorization header, validates against DB (users table),
  * and attaches the user object to the context.
  */
 export const basicAuthMiddleware = createMiddleware(async (c: Context, next: Next) => {

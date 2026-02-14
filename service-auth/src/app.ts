@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { configLoader } from './config/loader';
 import { auth } from './middlewares/auth';
 import { basicAuthMiddleware } from './middlewares/basic-auth';
+import { systemAuthMiddleware } from './middlewares/system-auth';
 import { loginHandler, logoutHandler } from './modules/auth/handlers/auth';
 
 const app = new Hono();
@@ -12,7 +13,7 @@ const app = new Hono();
 app.use('*', cors());
 app.use('*', logger());
 
-// Health check endpoint
+// Health check endpoint (Public)
 app.get('/health', c => {
   return c.json({
     status: 'ok',
@@ -22,9 +23,22 @@ app.get('/health', c => {
   });
 });
 
+// Admin/System Routes (Protected by System Basic Auth - Env Vars)
+app.get('/admin/health', systemAuthMiddleware, c => {
+  return c.json({
+    status: 'ok',
+    service: 'auth-service',
+    mode: 'admin',
+    config: {
+      db: 'connected',
+      kafka: 'connected',
+    },
+  });
+});
+
 // Authentication Routes
 
-// Login: Protected by Basic Auth Middleware (validates credentials)
+// Login: Protected by User Basic Auth Middleware (validates against DB)
 app.post('/auth/login', basicAuthMiddleware, loginHandler);
 
 // Logout: Protected by JWT Auth Middleware (validates session token)

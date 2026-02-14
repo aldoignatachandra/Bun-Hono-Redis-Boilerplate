@@ -7,11 +7,12 @@
       "port": 3101
     },
     "productService": {
-      "port": 3102
+      "port": "${PORT}"
     }
   },
   "kafka": {
-    "brokers": ["kafka-1:9092", "kafka-2:9092", "kafka-3:9092"],
+    "brokers": "${KAFKA_BROKERS}",
+    "clientId": "${KAFKA_CLIENT_ID}",
     "ssl": true,
     "sasl": {
       "mechanism": "plain",

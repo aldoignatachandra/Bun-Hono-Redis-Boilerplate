@@ -8,7 +8,7 @@ export const users = createParanoidTable(
   {
     email: varchar('email', { length: 255 }).notNull().unique(),
     password: text('password').notNull(),
-    role: roleEnum,
+    role: roleEnum('role'),
   },
   table => ({
     roleIdx: index('users_role_idx').on(table.role),
