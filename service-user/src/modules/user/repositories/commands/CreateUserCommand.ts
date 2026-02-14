@@ -1,16 +1,13 @@
-import type { UserResponse } from '../../domain/schema';
 import bcrypt from 'bcrypt';
 import { Service } from 'typedi';
-import { UserEventPublisher } from '../../events/UserEventPublisher';
-import { UserRepository } from '../UserRepository';
 import { CreateUserInput } from '../../domain/auth';
+import type { UserResponse } from '../../domain/schema';
+import { userCreatedProducer } from '../../events/user-events';
+import { UserRepository } from '../UserRepository';
 
 @Service()
 export class CreateUserCommand {
-  constructor(
-    private userRepository: UserRepository,
-    private eventPublisher: UserEventPublisher
-  ) {}
+  constructor(private userRepository: UserRepository) {}
 
   async execute(data: CreateUserInput): Promise<UserResponse> {
     // Hash password
@@ -24,7 +21,7 @@ export class CreateUserCommand {
     });
 
     // Publish event
-    await this.eventPublisher.publishUserCreated(user);
+    await userCreatedProducer(user);
 
     return user;
   }

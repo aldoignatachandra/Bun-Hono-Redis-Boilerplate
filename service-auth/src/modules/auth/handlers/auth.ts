@@ -5,6 +5,7 @@ import { configLoader } from '../../../config/loader';
 import { drizzleDb } from '../../../db/connection';
 import { userSessions } from '../../../db/schema';
 import { getRequestMetadata } from '../../../helpers/request-metadata';
+import { authLoginProducer, authLogoutProducer } from '../events/auth-events';
 
 // Define JWT Payload type
 interface JWTPayload {
@@ -72,6 +73,17 @@ export const loginHandler = async (c: Context) => {
     const secret = configLoader.getConfig().auth.jwt.secret;
     const token = jwt.sign(payload, secret, { expiresIn: '1d' });
 
+    // 5. Publish Login Event
+    await authLoginProducer({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      sessionId: session.id,
+      ipAddress,
+      userAgent,
+      deviceType,
+    });
+
     return c.json({
       token,
       user: {
@@ -101,6 +113,15 @@ export const logoutHandler = async (c: Context) => {
   try {
     // Force Delete specific session
     await drizzleDb.delete(userSessions).where(eq(userSessions.id, user.jti));
+
+    // Publish Logout Event
+    await authLogoutProducer({
+      userId: user.sub,
+      email: user.email,
+      role: user.role,
+      sessionId: user.jti,
+    });
+
     return c.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout Handler Error:', error);

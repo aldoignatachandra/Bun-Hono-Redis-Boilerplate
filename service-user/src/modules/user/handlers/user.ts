@@ -4,6 +4,7 @@ import { JWTPayload } from '../../../helpers/types';
 import { auth, requireRole } from '../../../middlewares/auth';
 import { CreateUserSchema } from '../domain/auth';
 import { CreateUserCommand } from '../repositories/commands/CreateUserCommand';
+import { DeleteUserCommand } from '../repositories/commands/DeleteUserCommand';
 import { RestoreUserCommand } from '../repositories/commands/RestoreUserCommand';
 import { GetUserQuery } from '../repositories/queries/GetUserQuery';
 import { UserRepository } from '../repositories/UserRepository';
@@ -103,12 +104,8 @@ userRoutes.delete('/admin/users/:id', auth, requireRole('ADMIN'), async c => {
     const userId = c.req.param('id');
     const force = c.req.query('force') === 'true';
 
-    const userRepository = Container.get(UserRepository);
-    const success = await userRepository.delete(userId, force);
-
-    if (!success) {
-      return c.text('User not found', 404);
-    }
+    const deleteUserCommand = Container.get(DeleteUserCommand);
+    await deleteUserCommand.execute(userId, force);
 
     return c.json({
       message: force ? 'User permanently deleted' : 'User soft deleted',
@@ -116,6 +113,9 @@ userRoutes.delete('/admin/users/:id', auth, requireRole('ADMIN'), async c => {
       force,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'User not found') {
+      return c.text('User not found', 404);
+    }
     return c.text('Failed to delete user', 500);
   }
 });

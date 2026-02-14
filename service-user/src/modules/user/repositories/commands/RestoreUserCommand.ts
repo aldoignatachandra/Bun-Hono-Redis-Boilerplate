@@ -1,13 +1,10 @@
 import { Service } from 'typedi';
-import { UserEventPublisher } from '../../events/UserEventPublisher';
+import { userRestoredProducer } from '../../events/user-events';
 import { UserRepository } from '../UserRepository';
 
 @Service()
 export class RestoreUserCommand {
-  constructor(
-    private userRepository: UserRepository,
-    private userEventPublisher: UserEventPublisher
-  ) {}
+  constructor(private userRepository: UserRepository) {}
 
   async execute(id: string) {
     // Check if user exists and was deleted
@@ -24,12 +21,12 @@ export class RestoreUserCommand {
     }
 
     // Emit Kafka event
-    await this.userEventPublisher.publishUserRestored({
+    await userRestoredProducer({
       id: deletedUser.id,
       email: deletedUser.email,
       role: deletedUser.role,
       createdAt: deletedUser.createdAt,
-      restoredAt: new Date(),
+      updatedAt: deletedUser.updatedAt,
     });
 
     // Return the restored user

@@ -1,4 +1,4 @@
-import { index, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { index, jsonb, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { BaseParanoidEntity, createParanoidTable } from '../../../helpers/schema/base-table';
 import { roleEnum } from '../../../helpers/schema/enums';
 
@@ -34,10 +34,31 @@ export const userSessions = createParanoidTable(
   })
 );
 
+// User Activity Log Schema
+export const userActivityLogs = createParanoidTable(
+  'user_activity_logs',
+  {
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    action: varchar('action', { length: 255 }).notNull(), // e.g., 'auth.login', 'product.create'
+    entityId: uuid('entity_id'), // Optional: ID of the entity affected (product_id, user_id, etc.)
+    details: jsonb('details'), // Metadata: { ip, ua, diff, etc. }
+    ipAddress: varchar('ip_address', { length: 45 }),
+    userAgent: text('user_agent'),
+  },
+  table => ({
+    userIdIdx: index('user_activity_logs_user_id_idx').on(table.userId),
+    actionIdx: index('user_activity_logs_action_idx').on(table.action),
+    createdAtIdx: index('user_activity_logs_created_at_idx').on(table.createdAt),
+  })
+);
+
 // TypeScript types for User entity
 export type User = typeof users.$inferSelect; // Select type
 export type NewUser = typeof users.$inferInsert; // Insert type
 export type UpdateUser = Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>;
+
+export type UserActivityLog = typeof userActivityLogs.$inferSelect;
+export type NewUserActivityLog = typeof userActivityLogs.$inferInsert;
 
 // Enhanced user types with paranoid support
 export interface UserEntity extends BaseParanoidEntity {

@@ -1,5 +1,5 @@
-import type { UserResponse } from '../../domain/schema';
 import { Service } from 'typedi';
+import type { UserResponse } from '../../domain/schema';
 import { UserRepository, type UserRepositoryOptions } from '../UserRepository';
 
 @Service()
