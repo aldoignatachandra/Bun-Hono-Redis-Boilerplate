@@ -1,7 +1,7 @@
-import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { closeDatabaseConnection, drizzleDb } from '../db/connection';
 import logger from '../helpers/logger';
+import { hashPassword } from '../helpers/password';
 import { users } from '../modules/user/domain/schema';
 
 async function seed() {
@@ -9,8 +9,8 @@ async function seed() {
     logger.info('Starting database seed...');
 
     const adminEmail = 'admin@example.com';
-    const adminPassword = 'admin';
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    const adminPassword = 'Admin123!';
+    const hashedPassword = await hashPassword(adminPassword);
 
     // Check if admin already exists
     const existingUser = await drizzleDb.query.users.findFirst({

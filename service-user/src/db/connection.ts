@@ -25,6 +25,17 @@ function getDatabaseUrl(): string {
     return defaultUrl;
   }
 
+  // Remove schema parameter if present, as it can cause issues with postgres.js
+  try {
+    const url = new URL(dbUrl);
+    if (url.searchParams.has('schema')) {
+      url.searchParams.delete('schema');
+      return url.toString();
+    }
+  } catch (e) {
+    // If URL parsing fails, return original string and let postgres.js handle error
+  }
+
   return dbUrl;
 }
 

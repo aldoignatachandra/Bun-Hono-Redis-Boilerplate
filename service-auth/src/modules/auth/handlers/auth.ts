@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { configLoader } from '../../../config/loader';
 import { drizzleDb } from '../../../db/connection';
 import { userSessions } from '../../../db/schema';
+import { errorResponse, successResponse } from '../../../helpers/api-response';
 import { getRequestMetadata } from '../../../helpers/request-metadata';
 import { authLoginProducer, authLogoutProducer } from '../events/auth-events';
 

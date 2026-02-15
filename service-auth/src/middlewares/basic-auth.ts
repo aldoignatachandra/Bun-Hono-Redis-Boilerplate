@@ -1,7 +1,7 @@
-import bcrypt from 'bcrypt';
 import { Context, Next } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { drizzleDb } from '../db/connection';
+import { comparePassword } from '../helpers/password';
 
 // Extend Hono Context to include the authenticated user
 declare module 'hono' {
@@ -53,7 +53,7 @@ export const basicAuthMiddleware = createMiddleware(async (c: Context, next: Nex
       return c.json({ message: 'Unauthorized: Invalid credentials' }, 401);
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = await comparePassword(password, user.password);
     if (!validPassword) {
       return c.json({ message: 'Unauthorized: Invalid credentials' }, 401);
     }

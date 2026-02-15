@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PasswordSchema } from '../../../helpers/password';
 
 // Base user schema for this service
 const BaseUserSchema = z.object({
@@ -6,7 +7,7 @@ const BaseUserSchema = z.object({
   email: z.string().email('Invalid email format'),
   username: z.string().min(3, 'Username must be at least 3 characters').max(50),
   name: z.string().min(1, 'Name is required').max(255).optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: PasswordSchema,
   role: z.enum(['ADMIN', 'USER']).optional().default('USER'),
   created_at: z.date().optional(),
   updated_at: z.date().optional(),
@@ -16,7 +17,7 @@ const BaseUserSchema = z.object({
 export const LoginSchema = BaseUserSchema.pick({
   email: true,
 }).extend({
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'), // Login doesn't need strict validation, just presence
 });
 
 export const CreateUserSchema = BaseUserSchema.omit({
@@ -38,7 +39,7 @@ export const UpdateUserSchema = BaseUserSchema.omit({
     email: z.string().email('Invalid email format').optional(),
     username: z.string().min(3).max(50).optional(),
     name: z.string().min(1).max(255).optional(),
-    password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+    password: PasswordSchema.optional(),
     role: z.enum(['ADMIN', 'USER']).optional(),
   })
   .partial();
