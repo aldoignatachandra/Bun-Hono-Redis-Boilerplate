@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Container } from 'typedi';
 import { errorResponse, successResponse } from '../../../helpers/api-response';
+import { getRequestMetadata } from '../../../helpers/request-metadata';
 import { JWTPayload } from '../../../helpers/types';
 import { auth, requireRole } from '../../../middlewares/auth';
 import { CreateUserSchema } from '../domain/auth';
@@ -33,9 +34,10 @@ userRoutes.post('/admin/users', async c => {
   try {
     const body = await c.req.json();
     const validatedData = CreateUserSchema.parse(body);
+    const metadata = getRequestMetadata(c);
 
     const createUserCommand = Container.get(CreateUserCommand);
-    const user = await createUserCommand.execute(validatedData);
+    const user = await createUserCommand.execute(validatedData, metadata);
 
     return successResponse(
       c,

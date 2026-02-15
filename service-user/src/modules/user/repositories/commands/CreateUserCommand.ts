@@ -4,12 +4,13 @@ import type { UserResponse } from '../../domain/schema';
 import { userCreatedProducer } from '../../events/user-events';
 import { UserRepository } from '../UserRepository';
 import { hashPassword } from '../../../../helpers/password';
+import { RequestMetadata } from '../../../../helpers/request-metadata';
 
 @Service()
 export class CreateUserCommand {
   constructor(private userRepository: UserRepository) {}
 
-  async execute(data: CreateUserInput): Promise<UserResponse> {
+  async execute(data: CreateUserInput, metadata?: RequestMetadata): Promise<UserResponse> {
     // Hash password
     const hashedPassword = await hashPassword(data.password);
 
@@ -23,7 +24,14 @@ export class CreateUserCommand {
     });
 
     // [Kafka] Send 'user.created' event to message broker to notify other services
-    await userCreatedProducer(user);
+    await userCreatedProducer({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      ...metadata,
+    });
 
     return user;
   }

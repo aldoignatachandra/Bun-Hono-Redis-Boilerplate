@@ -118,7 +118,10 @@ export const logoutHandler = async (c: Context) => {
   }
 
   try {
-    // Force Delete specific session
+    // 1. Get Request Metadata (Same as Login)
+    const { ipAddress, userAgent, deviceType } = getRequestMetadata(c);
+
+    // 2. Force Delete specific session
     await drizzleDb.delete(userSessions).where(eq(userSessions.id, user.jti));
 
     // [Kafka] Send 'auth.logout' event to message broker for activity logging
@@ -127,6 +130,9 @@ export const logoutHandler = async (c: Context) => {
       email: user.email,
       role: user.role,
       sessionId: user.jti,
+      ipAddress,
+      userAgent,
+      deviceType,
     });
 
     return successResponse(c, null, 'Logged out successfully');

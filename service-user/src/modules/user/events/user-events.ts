@@ -8,6 +8,9 @@ export interface UserEvent {
   role: string;
   createdAt: Date;
   updatedAt?: Date;
+  ipAddress?: string;
+  userAgent?: string;
+  deviceType?: string;
 }
 
 export async function userCreatedProducer(user: UserEvent) {

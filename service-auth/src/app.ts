@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { configLoader } from './config/loader';
+import { successResponse } from './helpers/api-response';
 import { auth } from './middlewares/auth';
 import { basicAuthMiddleware } from './middlewares/basic-auth';
 import { systemAuthMiddleware } from './middlewares/system-auth';
@@ -15,25 +16,32 @@ app.use('*', logger());
 
 // Health check endpoint (Public)
 app.get('/health', c => {
-  return c.json({
-    status: 'ok',
-    service: 'auth-service',
-    environment: configLoader.getEnvironment(),
-    timestamp: new Date().toISOString(),
-  });
+  return successResponse(
+    c,
+    {
+      service: 'auth-service',
+      environment: configLoader.getEnvironment(),
+      timestamp: new Date().toISOString(),
+    },
+    'Service is healthy'
+  );
 });
 
 // Admin/System Routes (Protected by System Basic Auth - Env Vars)
 app.get('/admin/health', systemAuthMiddleware, c => {
-  return c.json({
-    status: 'ok',
-    service: 'auth-service',
-    mode: 'admin',
-    config: {
-      db: 'connected',
-      kafka: 'connected',
+  return successResponse(
+    c,
+    {
+      service: 'auth-service',
+      mode: 'admin',
+      config: {
+        db: 'connected',
+        kafka: 'connected',
+      },
+      timestamp: new Date().toISOString(),
     },
-  });
+    'Admin health check passed'
+  );
 });
 
 // Authentication Routes

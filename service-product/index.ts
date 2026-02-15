@@ -1,7 +1,9 @@
+import 'reflect-metadata';
+import app from './src/app';
 import { configLoader } from './src/config/loader';
+import './src/helpers/bun-patches'; // Suppress KafkaJS/Bun warnings
 import { initializeKafkaTopics } from './src/helpers/kafka';
 import logger from './src/helpers/logger';
-import app from './src/app';
 
 const port = configLoader.getConfig().services.productService.port;
 

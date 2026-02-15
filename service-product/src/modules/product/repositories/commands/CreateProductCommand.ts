@@ -1,4 +1,5 @@
 import { Service } from 'typedi';
+import { RequestMetadata } from '../../../../helpers/request-metadata';
 import { CreateProductRequest as CreateProductInput } from '../../domain/schema';
 import { productCreatedProducer } from '../../events/product-events';
 import { ProductRepository } from '../ProductRepository';
@@ -7,7 +8,7 @@ import { ProductRepository } from '../ProductRepository';
 export class CreateProductCommand {
   constructor(private productRepository: ProductRepository) {}
 
-  async execute(data: CreateProductInput & { ownerId: string }) {
+  async execute(data: CreateProductInput & { ownerId: string }, metadata?: RequestMetadata) {
     // Create product
     // The repository expects specific fields, we pass data directly assuming validation ensures types match
     const product = await this.productRepository.create({
@@ -17,7 +18,10 @@ export class CreateProductCommand {
     });
 
     // [Kafka] Send 'product.created' event to message broker to notify other services
-    await productCreatedProducer(product);
+    await productCreatedProducer({
+      ...product,
+      ...metadata,
+    });
 
     return product;
   }

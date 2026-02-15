@@ -1,4 +1,4 @@
-import { Consumer, Kafka, logLevel, Producer } from 'kafkajs';
+import { Consumer, Kafka, logLevel, Partitioners, Producer } from 'kafkajs';
 import { configLoader } from '../config/loader';
 
 // Kafka client configuration
@@ -21,17 +21,18 @@ export const kafka = new Kafka({
       }
     : undefined,
   // Connection timeout
+  connectionTimeout: 10000,
   requestTimeout: 30000,
-  // Retry configuration
   retry: {
-    initialRetryTime: 100,
-    retries: 8,
+    initialRetryTime: 300,
+    retries: 10,
   },
 });
 
 // Producer factory with optimized configuration
 export async function createProducer(): Promise<Producer> {
   const producer = kafka.producer({
+    createPartitioner: Partitioners.DefaultPartitioner,
     // Enable idempotent producer for exactly-once semantics
     idempotent: configLoader.getConfig().kafka.producer.enableIdempotence,
     // Allow automatic topic creation for development

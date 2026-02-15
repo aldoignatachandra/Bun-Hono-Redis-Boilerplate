@@ -86,6 +86,12 @@ const ConfigSchema = z.object({
       encryptionEnabled: z.boolean(),
       keyRotationInterval: z.number(),
       auditLogging: z.boolean(),
+      systemAuth: z
+        .object({
+          username: z.string().optional(),
+          password: z.string().optional(),
+        })
+        .optional(),
     })
     .optional(),
   features: z
@@ -272,6 +278,14 @@ class ConfigLoader {
     if (process.env.KAFKA_BROKERS) {
       if (!config.kafka) config.kafka = {};
       config.kafka.brokers = process.env.KAFKA_BROKERS.split(',').map(b => b.trim());
+    }
+
+    // System Auth overrides
+    if (process.env.SYSTEM_USER || process.env.SYSTEM_PASS) {
+      if (!config.security) config.security = {};
+      if (!config.security.systemAuth) config.security.systemAuth = {};
+      if (process.env.SYSTEM_USER) config.security.systemAuth.username = process.env.SYSTEM_USER;
+      if (process.env.SYSTEM_PASS) config.security.systemAuth.password = process.env.SYSTEM_PASS;
     }
 
     // 5. Substitute any ${VAR} placeholders in the config (e.g. from JSON files)

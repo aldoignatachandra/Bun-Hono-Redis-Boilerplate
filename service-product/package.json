@@ -25,25 +25,27 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "dotenv": "^16.3.1",
+    "drizzle-orm": "^0.29.3",
     "hono": "^3.11.7",
     "kafkajs": "^2.2.4",
-    "drizzle-orm": "^0.29.3",
-    "postgres": "^3.4.3",
-    "zod": "^3.22.4",
-    "typedi": "^0.10.0",
-    "reflect-metadata": "^0.1.14",
     "pino": "^8.17.2",
+    "postgres": "^3.4.3",
     "prom-client": "^15.1.0",
-    "dotenv": "^16.3.1"
+    "reflect-metadata": "^0.1.14",
+    "typedi": "^0.10.0",
+    "ua-parser-js": "^2.0.9",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.20.6",
     "@types/node": "^20.10.5",
     "@types/pg": "^8.10.9",
-    "typescript": "^5.6.3",
-    "bun-types": "latest",
-    "eslint": "^8.55.0",
+    "@types/ua-parser-js": "^0.7.39",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
-    "@typescript-eslint/parser": "^6.14.0"
+    "@typescript-eslint/parser": "^6.14.0",
+    "bun-types": "latest",
+    "drizzle-kit": "^0.20.6",
+    "eslint": "^8.55.0",
+    "typescript": "^5.6.3"
   }
 }

@@ -63,9 +63,7 @@ export async function authLoginProducer(data: AuthEvent) {
   }
 }
 
-export async function authLogoutProducer(
-  data: Omit<AuthEvent, 'ipAddress' | 'userAgent' | 'deviceType'>
-) {
+export async function authLogoutProducer(data: AuthEvent) {
   const producer = await createProducer();
   const topic = 'auth.events';
 

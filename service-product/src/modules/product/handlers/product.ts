@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { Container } from 'typedi';
 import { errorResponse, successResponse } from '../../../helpers/api-response';
+import { getRequestMetadata } from '../../../helpers/request-metadata';
 import { auth } from '../../../middlewares/auth';
 import { CreateProductSchema, UpdateProductSchema } from '../domain/product';
 import { CreateProductCommand } from '../repositories/commands/CreateProductCommand';
@@ -33,13 +34,17 @@ productRoutes.post('/products', async c => {
     const user = c.get('user');
     const body = await c.req.json();
     const validatedData = CreateProductSchema.parse(body);
+    const metadata = getRequestMetadata(c);
 
     const createProductCommand = Container.get(CreateProductCommand);
-    const product = await createProductCommand.execute({
-      name: validatedData.name,
-      price: validatedData.price,
-      ownerId: user.sub,
-    });
+    const product = await createProductCommand.execute(
+      {
+        name: validatedData.name,
+        price: validatedData.price,
+        ownerId: user.sub,
+      },
+      metadata
+    );
 
     return successResponse(c, product, 'Product created successfully', 201);
   } catch (error) {

@@ -1,4 +1,5 @@
 import { Service } from 'typedi';
+import { RequestMetadata } from '../../../../helpers/request-metadata';
 import { userRestoredProducer } from '../../events/user-events';
 import { UserRepository } from '../UserRepository';
 
@@ -6,7 +7,7 @@ import { UserRepository } from '../UserRepository';
 export class RestoreUserCommand {
   constructor(private userRepository: UserRepository) {}
 
-  async execute(id: string) {
+  async execute(id: string, metadata?: RequestMetadata) {
     // Check if user exists and was deleted
     const deletedUser = await this.userRepository.findByIdWithDeleted(id);
 
@@ -27,6 +28,7 @@ export class RestoreUserCommand {
       role: deletedUser.role,
       createdAt: deletedUser.createdAt,
       updatedAt: deletedUser.updatedAt,
+      ...metadata,
     });
 
     // Return the restored user

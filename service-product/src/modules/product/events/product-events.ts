@@ -9,6 +9,9 @@ export interface ProductEvent {
   ownerId: string;
   createdAt: Date;
   updatedAt: Date;
+  ipAddress?: string;
+  userAgent?: string;
+  deviceType?: string;
 }
 
 // Product created event producer

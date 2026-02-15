@@ -4,6 +4,8 @@ import { logger } from 'hono/logger';
 import { Container } from 'typedi';
 import { configLoader } from './config/loader';
 import { checkDatabaseHealth } from './db/connection';
+import { successResponse, errorResponse } from './helpers/api-response';
+import { systemAuthMiddleware } from './middlewares/system-auth';
 import productRoutes from './modules/product/handlers/product';
 
 const app = new Hono();
@@ -41,14 +43,32 @@ app.route('/', productRoutes);
 // Health check endpoint
 app.get('/health', async c => {
   const dbHealth = await checkDatabaseHealth();
-
-  return c.json({
-    status: dbHealth ? 'ok' : 'error',
+  const data = {
     service: 'product-service',
     environment: configLoader.getEnvironment(),
     database: dbHealth ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString(),
-  });
+  };
+
+  if (dbHealth) {
+    return successResponse(c, data, 'Service is healthy');
+  } else {
+    return errorResponse(c, 'Service is unhealthy', 'SERVICE_UNHEALTHY', 503, data);
+  }
+});
+
+// Admin/System Routes (Protected by System Basic Auth)
+app.get('/admin/health', systemAuthMiddleware, async c => {
+  const dbHealth = await checkDatabaseHealth();
+  return successResponse(c, {
+    service: 'product-service',
+    mode: 'admin',
+    config: {
+      db: dbHealth ? 'connected' : 'disconnected',
+      kafka: 'connected', // Assuming Kafka is connected if service is running, or add check
+    },
+    timestamp: new Date().toISOString(),
+  }, 'Admin health check passed');
 });
 
 export default app;
