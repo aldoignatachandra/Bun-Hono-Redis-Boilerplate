@@ -20,7 +20,7 @@ export class UpdateProductCommand {
       throw new Error('Product not found or access denied');
     }
 
-    // Emit Kafka event
+    // [Kafka] Send 'product.updated' event to message broker to notify other services
     await productUpdatedProducer(product);
 
     return product;

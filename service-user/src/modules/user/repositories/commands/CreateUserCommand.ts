@@ -20,7 +20,7 @@ export class CreateUserCommand {
       role: data.role || 'USER',
     });
 
-    // Publish event
+    // [Kafka] Send 'user.created' event to message broker to notify other services
     await userCreatedProducer(user);
 
     return user;

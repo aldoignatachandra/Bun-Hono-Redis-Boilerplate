@@ -16,7 +16,7 @@ export class CreateProductCommand {
       ownerId: data.ownerId,
     });
 
-    // Emit Kafka event
+    // [Kafka] Send 'product.created' event to message broker to notify other services
     await productCreatedProducer(product);
 
     return product;

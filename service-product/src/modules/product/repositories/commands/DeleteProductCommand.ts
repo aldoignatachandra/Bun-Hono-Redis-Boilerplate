@@ -16,7 +16,7 @@ export class DeleteProductCommand {
     // Delete product
     await this.productRepository.delete(id, force);
 
-    // Emit Kafka event
+    // [Kafka] Send 'product.deleted' event to message broker to notify other services
     await productDeletedProducer(id, ownerId);
   }
 }

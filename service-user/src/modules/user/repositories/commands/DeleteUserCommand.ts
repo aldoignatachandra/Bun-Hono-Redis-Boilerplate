@@ -13,6 +13,7 @@ export class DeleteUserCommand {
       throw new Error('User not found');
     }
 
+    // [Kafka] Send 'user.deleted' event to message broker to notify other services
     await userDeletedProducer(id, force);
 
     return success;

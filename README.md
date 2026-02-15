@@ -146,19 +146,30 @@ Ensure `KAFKA_BROKERS=localhost:19092,localhost:29092` in all `.env` files.
 docker compose -f infra/docker/compose/dev.yml up -d
 ```
 
-### 4. Database Migration & Seeding
+### 4. Database Setup (Production-Grade)
+
+We use **Drizzle Migrations** instead of `db:push` for better control and production readiness.
 
 ```bash
-# Push schema and seed Admin user
+# User Service (Auth & Users)
 cd service-user
-bun run db:push
-bun run db:seed  # Creates admin@example.com / admin
+bun run db:setup     # Runs db:create && db:migrate
+bun run db:seed      # Creates admin@example.com / admin
 cd ..
 
+# Product Service
 cd service-product
-bun run db:push
+bun run db:setup     # Runs db:create && db:migrate
+cd ..
+
+# Auth Service (Gateway Session Store)
+cd service-auth
+bun run db:setup     # Runs db:create && db:migrate
 cd ..
 ```
+
+> **Tip:** You can use `bun run db:reset` to drop and re-create the database in any service.
+
 
 ### 5. Run Services
 

@@ -73,7 +73,7 @@ export const loginHandler = async (c: Context) => {
     const secret = configLoader.getConfig().auth.jwt.secret;
     const token = jwt.sign(payload, secret, { expiresIn: '1d' });
 
-    // 5. Publish Login Event
+    // [Kafka] Send 'auth.login' event to message broker for activity logging
     await authLoginProducer({
       userId: user.id,
       email: user.email,
@@ -114,7 +114,7 @@ export const logoutHandler = async (c: Context) => {
     // Force Delete specific session
     await drizzleDb.delete(userSessions).where(eq(userSessions.id, user.jti));
 
-    // Publish Logout Event
+    // [Kafka] Send 'auth.logout' event to message broker for activity logging
     await authLogoutProducer({
       userId: user.sub,
       email: user.email,

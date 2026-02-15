@@ -40,7 +40,7 @@ async function seed() {
     await closeDatabaseConnection();
     process.exit(0);
   } catch (error) {
-    console.error('Failed to seed database:', error);
+    logger.error('❌ Failed to seed database', { error });
     await closeDatabaseConnection();
     process.exit(1);
   }

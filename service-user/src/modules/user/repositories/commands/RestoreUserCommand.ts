@@ -20,7 +20,7 @@ export class RestoreUserCommand {
       throw new Error('Failed to restore user');
     }
 
-    // Emit Kafka event
+    // [Kafka] Send 'user.restored' event to message broker to notify other services
     await userRestoredProducer({
       id: deletedUser.id,
       email: deletedUser.email,

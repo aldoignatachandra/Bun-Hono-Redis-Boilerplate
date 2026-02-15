@@ -2,6 +2,8 @@ import { index, jsonb, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-cor
 import { BaseParanoidEntity, createParanoidTable } from '../../../helpers/schema/base-table';
 import { roleEnum } from '../../../helpers/schema/enums';
 
+export { roleEnum } from '../../../helpers/schema/enums';
+
 // User table schema
 export const users = createParanoidTable(
   'users',

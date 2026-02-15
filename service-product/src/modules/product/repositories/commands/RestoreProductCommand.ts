@@ -19,7 +19,7 @@ export class RestoreProductCommand {
       throw new Error('Failed to restore product');
     }
 
-    // Emit Kafka event
+    // [Kafka] Send 'product.restored' event to message broker to notify other services
     await productRestoredProducer(id, ownerId);
 
     // Return the restored product
