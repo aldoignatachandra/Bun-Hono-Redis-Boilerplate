@@ -1,7 +1,7 @@
 import { eq, isNull } from 'drizzle-orm';
 import { closeDatabaseConnection, drizzleDb } from '../db/connection';
-import logger from '../helpers/logger';
 import { ApiClientError, createApiClient, ServiceUrls } from '../helpers/api-client';
+import logger from '../helpers/logger';
 import { products } from '../modules/product/domain/schema';
 import { productAttributes } from '../modules/product/domain/schema-attributes';
 import { productVariants } from '../modules/product/domain/schema-variants';
@@ -53,7 +53,9 @@ async function getOwnerId(): Promise<string> {
   try {
     logger.info('🔍 Fetching oldest USER from user service...');
 
-    const response = await userClient.get<OldestUserResponse>('/api/internal/users/oldest?role=USER');
+    const response = await userClient.get<OldestUserResponse>(
+      '/api/internal/users/oldest?role=USER'
+    );
 
     if (response.success && response.data) {
       const userId = response.data.id;
@@ -136,10 +138,8 @@ async function seed() {
 
     // MARKETPLACE MODEL: Check for existing product by BOTH name AND owner
     const existingSimple = await drizzleDb.query.products.findFirst({
-      where: (products, { eq, and }) => and(
-        eq(products.name, simpleProductName),
-        eq(products.ownerId, ownerId)
-      ),
+      where: (products, { eq, and }) =>
+        and(eq(products.name, simpleProductName), eq(products.ownerId, ownerId)),
     });
 
     if (!existingSimple) {
@@ -175,10 +175,8 @@ async function seed() {
 
     // MARKETPLACE MODEL: Check for existing product by BOTH name AND owner
     const existingVariant = await drizzleDb.query.products.findFirst({
-      where: (products, { eq, and }) => and(
-        eq(products.name, variantProductName),
-        eq(products.ownerId, ownerId)
-      ),
+      where: (products, { eq, and }) =>
+        and(eq(products.name, variantProductName), eq(products.ownerId, ownerId)),
     });
 
     if (!existingVariant) {
@@ -230,7 +228,7 @@ async function seed() {
       const insertedVariants = await drizzleDb
         .insert(productVariants)
         .values(
-          variantData.map((v) => ({
+          variantData.map(v => ({
             productId: variantProduct.id,
             sku: v.sku,
             price: v.price,
@@ -242,7 +240,7 @@ async function seed() {
         .returning();
 
       logger.info(`   Variants: ${insertedVariants.length} SKUs created`);
-      insertedVariants.forEach((v) => {
+      insertedVariants.forEach(v => {
         logger.info(
           `     - ${v.sku}: $${((v.price || 0) / 100).toFixed(2)} (stock: ${v.stockQuantity})`
         );
@@ -266,17 +264,12 @@ async function seed() {
     // ============================================
     logger.info('');
     logger.info('=====================================');
-    const allProducts = await drizzleDb
-      .select()
-      .from(products)
-      .where(isNull(products.deletedAt));
+    const allProducts = await drizzleDb.select().from(products).where(isNull(products.deletedAt));
 
     logger.info('📊 Seeding Summary:');
     logger.info(`   Total Products: ${allProducts.length}`);
-    logger.info(`   Simple Products: ${allProducts.filter((p) => !p.hasVariant).length}`);
-    logger.info(
-      `   Products with Variants: ${allProducts.filter((p) => p.hasVariant).length}`
-    );
+    logger.info(`   Simple Products: ${allProducts.filter(p => !p.hasVariant).length}`);
+    logger.info(`   Products with Variants: ${allProducts.filter(p => p.hasVariant).length}`);
     logger.info('=====================================');
 
     await closeDatabaseConnection();

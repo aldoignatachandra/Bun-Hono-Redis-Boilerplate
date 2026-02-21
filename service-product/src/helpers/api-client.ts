@@ -213,7 +213,7 @@ export function createApiClient(config: ApiClientConfig): InternalApiClient {
  * Default client configurations for known services
  */
 export const ServiceUrls = {
-  USER_SERVICE: process.env.USER_SERVICE_URL || 'http://localhost:3001',
-  PRODUCT_SERVICE: process.env.PRODUCT_SERVICE_URL || 'http://localhost:3002',
-  AUTH_SERVICE: process.env.AUTH_SERVICE_URL || 'http://localhost:3003',
+  USER_SERVICE: process.env.USER_SERVICE_URL || 'http://localhost:3101',
+  PRODUCT_SERVICE: process.env.PRODUCT_SERVICE_URL || 'http://localhost:3102',
+  AUTH_SERVICE: process.env.AUTH_SERVICE_URL || 'http://localhost:3100',
 } as const;
