@@ -41,45 +41,43 @@ export const loginHandler = async (c: Context) => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 1); // 1 Day Expiry
 
+  // 3. Generate Session ID & Token
+  const sessionId = crypto.randomUUID();
+  const secret = configLoader.getConfig().auth.jwt.secret;
+
+  const payload: JWTPayload = {
+    sub: user.id,
+    jti: sessionId,
+    email: user.email,
+    role: user.role,
+  };
+
+  const token = jwt.sign(payload, secret, { expiresIn: '1d' });
+
   try {
-    // 3. Atomic Session Management (Force Delete Old -> Create New)
-    const session = await drizzleDb.transaction(async tx => {
+    // 4. Atomic Session Management (Force Delete Old -> Create New)
+    await drizzleDb.transaction(async tx => {
       // A. FORCE DELETE all existing sessions for this user (Hard Delete)
-      // This enforces the "Single Active Session" rule
       await tx.delete(userSessions).where(eq(userSessions.userId, user.id));
 
-      // B. Create New Session
-      const [newSession] = await tx
-        .insert(userSessions)
-        .values({
-          userId: user.id,
-          ipAddress,
-          userAgent,
-          deviceType,
-          expiresAt: expiresAt,
-        })
-        .returning();
-
-      return newSession;
+      // B. Create New Session with Token
+      await tx.insert(userSessions).values({
+        id: sessionId,
+        userId: user.id,
+        token,
+        ipAddress,
+        userAgent,
+        deviceType,
+        expiresAt: expiresAt,
+      });
     });
-
-    // 4. Generate JWT tied to Session ID (jti)
-    const payload: JWTPayload = {
-      sub: user.id,
-      jti: session.id,
-      email: user.email,
-      role: user.role,
-    };
-
-    const secret = configLoader.getConfig().auth.jwt.secret;
-    const token = jwt.sign(payload, secret, { expiresIn: '1d' });
 
     // [Kafka] Send 'auth.login' event to message broker for activity logging
     await authLoginProducer({
       userId: user.id,
       email: user.email,
       role: user.role,
-      sessionId: session.id,
+      sessionId: sessionId,
       ipAddress,
       userAgent,
       deviceType,

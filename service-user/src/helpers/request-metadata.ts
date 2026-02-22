@@ -45,7 +45,7 @@ export const getRequestMetadata = (c: Context): RequestMetadata => {
   // Fallback if no headers found (e.g., direct connection in dev)
   // Note: Hono's c.req.raw might not expose socket info directly in all environments (like Cloudflare Workers),
   // but for Node/Bun, it often requires bindings. We default to 'unknown' or localhost if testing.
-  if (ipAddress === 'unknown' && process.env.NODE_ENV === 'development') {
+  if (ipAddress === 'unknown' && process.env.NODE_ENV === 'dev') {
     ipAddress = '127.0.0.1';
   }
 

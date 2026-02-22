@@ -161,6 +161,8 @@ userRoutes.get('/me', auth, async c => {
     {
       id: userDetails.id,
       email: userDetails.email,
+      username: userDetails.username,
+      name: userDetails.name,
       role: userDetails.role,
     },
     'User info fetched successfully'

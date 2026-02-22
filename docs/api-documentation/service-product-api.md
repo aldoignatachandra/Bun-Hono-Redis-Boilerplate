@@ -28,8 +28,8 @@ The Product Service is responsible for:
 
 - **Product Management**: CRUD operations for products
 - **Marketplace Model**: Multi-owner product catalog
-- **Product Variants**: Size, color, and attribute combinations
-- **Product Attributes**: Configurable product attributes
+- **Product Variants**: Support for products with multiple SKUs (Size, Color, etc.)
+- **Product Attributes**: Configurable attributes for variable products
 - **Search & Filter**: Advanced product search capabilities
 
 ### Key Features
@@ -172,7 +172,7 @@ Authorization: Basic YWRtaW46YWRtaW4xMjM=
 
 ### 3. Create Product
 
-Creates a new product owned by the authenticated user.
+Creates a new product owned by the authenticated user. Supports both **Simple Products** and **Variable Products**.
 
 | Attribute         | Value             |
 | ----------------- | ----------------- |
@@ -180,7 +180,7 @@ Creates a new product owned by the authenticated user.
 | **Path**          | `/products`       |
 | **Auth Required** | ✅ JWT (Any Role) |
 
-#### Request
+#### Request (Simple Product)
 
 ```http
 POST /products HTTP/1.1
@@ -189,21 +189,66 @@ Authorization: Bearer <jwt-token>
 Content-Type: application/json
 ```
 
-**Request Body:**
+```json
+{
+  "name": "Premium T-Shirt",
+  "price": 2999,
+  "stock": 100
+}
+```
+
+#### Request (Variable Product)
+
+Creates a product with attributes (Size, Color) and variants (SKUs).
 
 ```json
 {
   "name": "Premium T-Shirt",
-  "price": 2999
+  "price": 2999,
+  "attributes": [
+    {
+      "name": "Color",
+      "values": ["Red", "Blue"],
+      "displayOrder": 1
+    },
+    {
+      "name": "Size",
+      "values": ["S", "M", "L"],
+      "displayOrder": 2
+    }
+  ],
+  "variants": [
+    {
+      "sku": "TSHIRT-RED-S",
+      "price": 2999,
+      "stock": 10,
+      "attributeValues": {
+        "Color": "Red",
+        "Size": "S"
+      }
+    },
+    {
+      "sku": "TSHIRT-BLUE-M",
+      "price": 3499,
+      "stock": 5,
+      "attributeValues": {
+        "Color": "Blue",
+        "Size": "M"
+      }
+    }
+  ]
 }
 ```
 
 **Fields:**
 
-| Field   | Type   | Required | Description                       |
-| ------- | ------ | -------- | --------------------------------- |
-| `name`  | string | ✅ Yes   | Product name (1-255 characters)   |
-| `price` | number | ✅ Yes   | Price in cents (positive integer) |
+| Field        | Type        | Required | Description                                              |
+| ------------ | ----------- | -------- | -------------------------------------------------------- |
+| `name`       | string      | ✅ Yes   | Product name (1-255 characters)                          |
+| `price`      | number      | ✅ Yes   | Base price in cents (positive integer)                   |
+| `stock`      | number      | ❌ No    | Initial stock (default: 0). Ignored if variants present. |
+| `attributes` | Attribute[] | ❌ No    | List of product attributes (Required for variants)       |
+| `variants`   | Variant[]   | ❌ No    | List of product variants (SKUs)                          |
 
 #### Response (201 Created)
 
@@ -216,10 +261,25 @@ Content-Type: application/json
     "name": "Premium T-Shirt",
     "price": 2999,
     "ownerId": "550e8400-e29b-41d4-a716-446655440000",
-    "stock": 0,
-    "hasVariant": false,
+    "stock": 15,
+    "hasVariant": true,
     "createdAt": "2026-02-21T10:00:00.000Z",
-    "updatedAt": "2026-02-21T10:00:00.000Z"
+    "updatedAt": "2026-02-21T10:00:00.000Z",
+    "attributes": [
+      {
+        "id": "880e...",
+        "name": "Color",
+        "values": ["Red", "Blue"]
+      }
+    ],
+    "variants": [
+      {
+        "id": "990e...",
+        "sku": "TSHIRT-RED-S",
+        "price": 2999,
+        "stockQuantity": 10
+      }
+    ]
   }
 }
 ```
@@ -230,18 +290,6 @@ Content-Type: application/json
 | ----- | ----------------------- | ------------------------ |
 | `400` | `PRODUCT_CREATE_FAILED` | Validation error         |
 | `401` | `UNAUTHORIZED`          | Invalid or missing token |
-
-#### cURL Example
-
-```bash
-curl -X POST http://localhost:3102/products \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Premium T-Shirt",
-    "price": 2999
-  }'
-```
 
 ---
 
@@ -258,22 +306,25 @@ Retrieves products with filtering and pagination.
 #### Request
 
 ```http
-GET /products?page=1&limit=10&search=shirt&minPrice=1000&maxPrice=5000&includeDeleted=false HTTP/1.1
+GET /products?page=1&limit=10&search=shirt&includeVariants=true HTTP/1.1
 Host: localhost:3102
 Authorization: Bearer <jwt-token>
 ```
 
 **Query Parameters:**
 
-| Parameter        | Type    | Default | Description                     |
-| ---------------- | ------- | ------- | ------------------------------- |
-| `page`           | number  | `1`     | Page number                     |
-| `limit`          | number  | `10`    | Items per page                  |
-| `search`         | string  | `null`  | Search by product name          |
-| `minPrice`       | number  | `null`  | Minimum price filter (cents)    |
-| `maxPrice`       | number  | `null`  | Maximum price filter (cents)    |
-| `includeDeleted` | boolean | `false` | Include soft-deleted products   |
-| `onlyDeleted`    | boolean | `false` | Only show soft-deleted products |
+| Parameter         | Type    | Default | Description                     |
+| ----------------- | ------- | ------- | ------------------------------- |
+| `page`            | number  | `1`     | Page number                     |
+| `limit`           | number  | `10`    | Items per page                  |
+| `search`          | string  | `null`  | Search by product name          |
+| `minPrice`        | number  | `null`  | Minimum price filter (cents)    |
+| `maxPrice`        | number  | `null`  | Maximum price filter (cents)    |
+| `hasVariant`      | boolean | `null`  | Filter by variable products     |
+| `inStock`         | boolean | `false` | Filter by stock availability    |
+| `includeVariants` | boolean | `false` | Include attributes & variants   |
+| `includeDeleted`  | boolean | `false` | Include soft-deleted products   |
+| `onlyDeleted`     | boolean | `false` | Only show soft-deleted products |
 
 #### Response (200 OK)
 
@@ -298,30 +349,16 @@ Authorization: Bearer <jwt-token>
     "page": 1,
     "limit": 10,
     "count": 1,
-    "includeDeleted": false,
-    "onlyDeleted": false,
-    "search": "shirt",
-    "priceRange": {
-      "min": 1000,
-      "max": 5000
-    }
+    "search": "shirt"
   }
 }
 ```
-
-#### Error Responses
-
-| Code  | Error Code             | Description              |
-| ----- | ---------------------- | ------------------------ |
-| `500` | `PRODUCT_FETCH_FAILED` | Failed to fetch products |
 
 ---
 
 ### 5. Get Product by ID
 
 Retrieves a specific product.
-
-> **Note:** Users can only fetch their own products. ADMINs can fetch any product.
 
 | Attribute         | Value             |
 | ----------------- | ----------------- |
@@ -337,18 +374,6 @@ Host: localhost:3102
 Authorization: Bearer <jwt-token>
 ```
 
-**Path Parameters:**
-
-| Parameter | Type          | Description |
-| --------- | ------------- | ----------- |
-| `id`      | string (UUID) | Product ID  |
-
-**Query Parameters:**
-
-| Parameter        | Type    | Default | Description                   |
-| ---------------- | ------- | ------- | ----------------------------- |
-| `includeDeleted` | boolean | `false` | Include soft-deleted products |
-
 #### Response (200 OK)
 
 ```json
@@ -362,28 +387,34 @@ Authorization: Bearer <jwt-token>
     "ownerId": "550e8400-e29b-41d4-a716-446655440000",
     "stock": 100,
     "hasVariant": true,
+    "attributes": [
+      {
+        "id": "attr-1",
+        "name": "Size",
+        "values": ["S", "M", "L"],
+        "displayOrder": 1
+      }
+    ],
+    "variants": [
+      {
+        "id": "var-1",
+        "sku": "TSHIRT-S",
+        "price": 2999,
+        "stockQuantity": 50,
+        "attributeValues": { "Size": "S" }
+      }
+    ],
     "createdAt": "2026-02-21T10:00:00.000Z",
-    "updatedAt": "2026-02-21T10:00:00.000Z",
-    "deletedAt": null
+    "updatedAt": "2026-02-21T10:00:00.000Z"
   }
 }
 ```
-
-#### Error Responses
-
-| Code  | Error Code             | Description                          |
-| ----- | ---------------------- | ------------------------------------ |
-| `403` | `ACCESS_DENIED`        | User doesn't own product (not ADMIN) |
-| `404` | `PRODUCT_NOT_FOUND`    | Product not found                    |
-| `500` | `PRODUCT_FETCH_FAILED` | Failed to fetch product              |
 
 ---
 
 ### 6. Update Product
 
-Updates an existing product.
-
-> **Note:** Only the product owner can update. ADMINs can update any product.
+Updates an existing product. Can also update attributes and variants (full replacement).
 
 | Attribute         | Value             |
 | ----------------- | ----------------- |
@@ -400,21 +431,22 @@ Authorization: Bearer <jwt-token>
 Content-Type: application/json
 ```
 
-**Request Body:**
-
 ```json
 {
   "name": "Premium T-Shirt V2",
-  "price": 3499
+  "price": 3499,
+  "variants": [
+    {
+      "sku": "TSHIRT-S",
+      "price": 3499,
+      "stock": 45,
+      "attributeValues": { "Size": "S" }
+    }
+  ]
 }
 ```
 
-**Fields:**
-
-| Field   | Type   | Required | Description                       |
-| ------- | ------ | -------- | --------------------------------- |
-| `name`  | string | ❌ No    | Product name (1-255 characters)   |
-| `price` | number | ❌ No    | Price in cents (positive integer) |
+> **Note:** If `variants` or `attributes` arrays are provided, they **replace** the existing lists entirely.
 
 #### Response (200 OK)
 
@@ -425,34 +457,9 @@ Content-Type: application/json
   "data": {
     "id": "770e8400-e29b-41d4-a716-446655440000",
     "name": "Premium T-Shirt V2",
-    "price": 3499,
-    "ownerId": "550e8400-e29b-41d4-a716-446655440000",
-    "stock": 100,
-    "hasVariant": true,
-    "createdAt": "2026-02-21T10:00:00.000Z",
     "updatedAt": "2026-02-21T10:05:00.000Z"
   }
 }
-```
-
-#### Error Responses
-
-| Code  | Error Code              | Description                          |
-| ----- | ----------------------- | ------------------------------------ |
-| `400` | `PRODUCT_UPDATE_FAILED` | Validation error                     |
-| `401` | `UNAUTHORIZED`          | Invalid or missing token             |
-| `403` | `ACCESS_DENIED`         | User doesn't own product (not ADMIN) |
-
-#### cURL Example
-
-```bash
-curl -X PATCH http://localhost:3102/products/770e8400-e29b-41d4-a716-446655440000 \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Premium T-Shirt V2",
-    "price": 3499
-  }'
 ```
 
 ---
@@ -460,8 +467,6 @@ curl -X PATCH http://localhost:3102/products/770e8400-e29b-41d4-a716-44665544000
 ### 7. Delete Product
 
 Deletes a product (soft delete by default).
-
-> **Note:** Only the product owner can delete. ADMINs can delete any product.
 
 | Attribute         | Value             |
 | ----------------- | ----------------- |
@@ -473,43 +478,7 @@ Deletes a product (soft delete by default).
 
 ```http
 DELETE /products/770e8400-e29b-41d4-a716-446655440000?force=false HTTP/1.1
-Host: localhost:3102
-Authorization: Bearer <jwt-token>
 ```
-
-**Path Parameters:**
-
-| Parameter | Type          | Description |
-| --------- | ------------- | ----------- |
-| `id`      | string (UUID) | Product ID  |
-
-**Query Parameters:**
-
-| Parameter | Type    | Default | Description                      |
-| --------- | ------- | ------- | -------------------------------- |
-| `force`   | boolean | `false` | Permanent deletion (hard delete) |
-
-#### Response (200 OK)
-
-```json
-{
-  "success": true,
-  "message": "Product soft deleted",
-  "data": {
-    "productId": "770e8400-e29b-41d4-a716-446655440000",
-    "force": false
-  }
-}
-```
-
-#### Error Responses
-
-| Code  | Error Code              | Description                          |
-| ----- | ----------------------- | ------------------------------------ |
-| `400` | `PRODUCT_DELETE_FAILED` | Deletion failed                      |
-| `401` | `UNAUTHORIZED`          | Invalid or missing token             |
-| `403` | `ACCESS_DENIED`         | User doesn't own product (not ADMIN) |
-| `404` | `PRODUCT_NOT_FOUND`     | Product not found                    |
 
 ---
 
@@ -517,61 +486,17 @@ Authorization: Bearer <jwt-token>
 
 Restores a soft-deleted product.
 
-> **Note:** Only the product owner can restore. ADMINs can restore any product.
-
 | Attribute         | Value                   |
 | ----------------- | ----------------------- |
 | **Method**        | `POST`                  |
 | **Path**          | `/products/:id/restore` |
 | **Auth Required** | ✅ JWT (Any Role)       |
 
-#### Request
-
-```http
-POST /products/770e8400-e29b-41d4-a716-446655440000/restore HTTP/1.1
-Host: localhost:3102
-Authorization: Bearer <jwt-token>
-```
-
-**Path Parameters:**
-
-| Parameter | Type          | Description |
-| --------- | ------------- | ----------- |
-| `id`      | string (UUID) | Product ID  |
-
-#### Response (200 OK)
-
-```json
-{
-  "success": true,
-  "message": "Product restored successfully",
-  "data": {
-    "product": {
-      "id": "770e8400-e29b-41d4-a716-446655440000",
-      "name": "Premium T-Shirt",
-      "price": 2999,
-      "ownerId": "550e8400-e29b-41d4-a716-446655440000",
-      "stock": 100,
-      "hasVariant": true,
-      "createdAt": "2026-02-21T10:00:00.000Z",
-      "updatedAt": "2026-02-21T10:10:00.000Z"
-    }
-  }
-}
-```
-
-#### Error Responses
-
-| Code  | Error Code               | Description        |
-| ----- | ------------------------ | ------------------ |
-| `404` | `PRODUCT_NOT_FOUND`      | Product not found  |
-| `500` | `PRODUCT_RESTORE_FAILED` | Restoration failed |
-
 ---
 
 ### 9. Search Products
 
-Alternative endpoint for product search with dedicated search query.
+Alternative endpoint for product search.
 
 | Attribute         | Value              |
 | ----------------- | ------------------ |
@@ -583,70 +508,7 @@ Alternative endpoint for product search with dedicated search query.
 
 ```http
 GET /products/search?q=t-shirt&includeDeleted=false HTTP/1.1
-Host: localhost:3102
-Authorization: Bearer <jwt-token>
 ```
-
-**Query Parameters:**
-
-| Parameter        | Type    | Required | Description                     |
-| ---------------- | ------- | -------- | ------------------------------- |
-| `q`              | string  | ✅ Yes   | Search query                    |
-| `includeDeleted` | boolean | `false`  | Include soft-deleted products   |
-| `onlyDeleted`    | boolean | `false`  | Only show soft-deleted products |
-
-#### Response (200 OK)
-
-```json
-{
-  "success": true,
-  "message": "Products searched successfully",
-  "data": [
-    {
-      "id": "770e8400-e29b-41d4-a716-446655440000",
-      "name": "Premium T-Shirt",
-      "price": 2999,
-      "ownerId": "550e8400-e29b-41d4-a716-446655440000",
-      "stock": 100,
-      "hasVariant": true,
-      "createdAt": "2026-02-21T10:00:00.000Z",
-      "updatedAt": "2026-02-21T10:00:00.000Z",
-      "deletedAt": null
-    }
-  ],
-  "meta": {
-    "query": "t-shirt",
-    "includeDeleted": false,
-    "onlyDeleted": false,
-    "count": 1
-  }
-}
-```
-
-#### Error Responses
-
-| Code  | Error Code              | Description                    |
-| ----- | ----------------------- | ------------------------------ |
-| `400` | `MISSING_SEARCH_QUERY`  | Search query (`q`) is required |
-| `500` | `PRODUCT_SEARCH_FAILED` | Search failed                  |
-
----
-
-## Error Codes
-
-| Error Code               | HTTP Status | Description                        |
-| ------------------------ | ----------- | ---------------------------------- |
-| `UNAUTHORIZED`           | 401         | Authentication required            |
-| `ACCESS_DENIED`          | 403         | User cannot access resource        |
-| `PRODUCT_NOT_FOUND`      | 404         | Product does not exist             |
-| `PRODUCT_CREATE_FAILED`  | 400         | Product creation validation failed |
-| `PRODUCT_UPDATE_FAILED`  | 400         | Product update validation failed   |
-| `PRODUCT_DELETE_FAILED`  | 400         | Product deletion failed            |
-| `PRODUCT_FETCH_FAILED`   | 500         | Failed to fetch products           |
-| `PRODUCT_SEARCH_FAILED`  | 500         | Product search error               |
-| `PRODUCT_RESTORE_FAILED` | 500         | Product restoration failed         |
-| `MISSING_SEARCH_QUERY`   | 400         | Search query parameter required    |
-| `SERVICE_UNHEALTHY`      | 503         | Service health check failed        |
 
 ---
 
@@ -658,13 +520,15 @@ Authorization: Bearer <jwt-token>
 interface Product {
   id: string; // UUID
   name: string; // 1-255 characters
-  price: number; // Price in cents (positive integer)
-  ownerId: string; // Owner user ID (UUID)
+  price: number; // Price in cents
+  ownerId: string; // Owner UUID
   stock: number; // Current stock quantity
   hasVariant: boolean; // Has product variants
+  attributes?: ProductAttribute[]; // Optional list of attributes
+  variants?: ProductVariant[]; // Optional list of variants
   createdAt: Date;
   updatedAt: Date;
-  deletedAt?: Date; // Soft delete timestamp
+  deletedAt?: Date;
 }
 ```
 
@@ -673,17 +537,14 @@ interface Product {
 ```typescript
 interface ProductVariant {
   id: string; // UUID
-  productId: string; // Parent product ID
-  sku: string; // Stock keeping unit
+  productId: string;
+  sku: string; // Unique SKU
   price: number; // Variant price in cents
-  stockQuantity: number; // Variant stock quantity
-  isActive: boolean; // Variant availability
+  stockQuantity: number;
+  isActive: boolean;
   attributeValues: {
-    // Attribute combinations
     [key: string]: string; // e.g., { Color: "Red", Size: "L" }
   };
-  createdAt: Date;
-  updatedAt: Date;
 }
 ```
 
@@ -692,12 +553,10 @@ interface ProductVariant {
 ```typescript
 interface ProductAttribute {
   id: string; // UUID
-  productId: string; // Parent product ID
-  name: string; // Attribute name (e.g., "Color", "Size")
-  values: string[]; // Possible values
-  displayOrder: number; // Display sort order
-  createdAt: Date;
-  updatedAt: Date;
+  productId: string;
+  name: string; // e.g., "Color"
+  values: string[]; // e.g., ["Red", "Blue"]
+  displayOrder: number;
 }
 ```
 
@@ -705,186 +564,25 @@ interface ProductAttribute {
 
 ```typescript
 interface CreateProductRequest {
-  name: string; // Required, 1-255 characters
-  price: number; // Required, positive integer (cents)
-}
-```
-
-### UpdateProductRequest
-
-```typescript
-interface UpdateProductRequest {
-  name?: string; // Optional, 1-255 characters
-  price?: number; // Optional, positive integer (cents)
-}
-```
-
----
-
-## Marketplace Model
-
-### Product Ownership
-
-Products follow a **marketplace model** where:
-
-1. **Multiple owners** can have products with the **same name**
-2. Products are unique by **(name, ownerId)** combination
-3. Users can only access their **own products**
-4. **ADMIN** users can access **all products**
-
-### Example
-
-```
-User A (ownerId: 111...)
-├── "iPhone Case" (id: aaa...)
-└── "T-Shirt"    (id: bbb...)
-
-User B (ownerId: 222...)
-├── "iPhone Case" (id: ccc...)  ✅ Different product, same name
-└── "Laptop Bag"  (id: ddd...)
-
-User C (ADMIN)
-└── Can access ALL products from all users
-```
-
-### Access Control Matrix
-
-| Operation | Owner  | ADMIN  | Other User |
-| --------- | ------ | ------ | ---------- |
-| Create    | ✅     | ✅     | ✅         |
-| Read      | ✅ Own | ✅ All | ✅ Own     |
-| Update    | ✅ Own | ✅ All | ❌         |
-| Delete    | ✅ Own | ✅ All | ❌         |
-| Restore   | ✅ Own | ✅ All | ❌         |
-
----
-
-## TypeScript Types
-
-```typescript
-// src/modules/product/domain/types.ts
-
-export interface Product {
-  id: string;
   name: string;
   price: number;
-  ownerId: string;
-  stock: number;
-  hasVariant: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt?: Date | null;
+  stock?: number;
+  attributes?: {
+    name: string;
+    values: string[];
+    displayOrder?: number;
+  }[];
+  variants?: {
+    sku: string;
+    price?: number;
+    stock?: number;
+    isActive?: boolean;
+    attributeValues: Record<string, string>;
+  }[];
 }
-
-export interface ProductResponse {
-  id: string;
-  name: string;
-  price: number;
-  ownerId: string;
-  stock: number;
-  hasVariant: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt?: Date | null;
-}
-
-export interface CreateProductRequest {
-  name: string;
-  price: number;
-}
-
-export interface UpdateProductRequest {
-  name?: string;
-  price?: number;
-}
-
-export interface ProductQueryOptions {
-  search?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  includeDeleted?: boolean;
-  onlyDeleted?: boolean;
-  page?: number;
-  limit?: number;
-}
-```
-
----
-
-## Usage Examples
-
-### Create Product
-
-```typescript
-const response = await fetch("http://localhost:3102/products", {
-  method: "POST",
-  headers: {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    name: "Premium T-Shirt",
-    price: 2999, // $29.99
-  }),
-});
-
-const { data } = await response.json();
-console.log("Created product:", data.id);
-```
-
-### Search Products
-
-```typescript
-const response = await fetch(
-  "http://localhost:3102/products/search?q=t-shirt&page=1&limit=20",
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  },
-);
-
-const { data, meta } = await response.json();
-console.log(`Found ${meta.count} products`);
-```
-
-### Get Products with Filters
-
-```typescript
-const params = new URLSearchParams({
-  minPrice: "1000",
-  maxPrice: "5000",
-  page: "1",
-  limit: "10",
-});
-
-const response = await fetch(`http://localhost:3102/products?${params}`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
-```
-
-### Update Product
-
-```typescript
-const response = await fetch(
-  "http://localhost:3102/products/770e8400-e29b-41d4-a716-446655440000",
-  {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: "Premium T-Shirt V2",
-      price: 3499,
-    }),
-  },
-);
 ```
 
 ---
 
 **Last Updated:** 2026-02-21
-**Documentation Version:** 1.0.0
+**Documentation Version:** 1.1.0

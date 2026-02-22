@@ -1,11 +1,11 @@
-import { Consumer, Kafka, logLevel, Producer, Partitioners } from 'kafkajs';
+import { Consumer, Kafka, logLevel, Partitioners, Producer } from 'kafkajs';
 import { configLoader } from '../config/loader';
 
 // Kafka client configuration
 export const kafka = new Kafka({
   clientId: configLoader.getConfig().kafka.clientId,
   brokers: configLoader.getConfig().kafka.brokers,
-  logLevel: logLevel.INFO,
+  logLevel: logLevel.ERROR,
   // SSL configuration
   ssl: configLoader.getConfig().kafka.ssl
     ? {

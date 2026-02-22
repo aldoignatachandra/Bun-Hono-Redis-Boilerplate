@@ -5,7 +5,7 @@ import { configLoader } from '../config/loader';
 export const kafka = new Kafka({
   clientId: configLoader.getConfig().kafka.clientId,
   brokers: configLoader.getConfig().kafka.brokers,
-  logLevel: logLevel.INFO,
+  logLevel: logLevel.ERROR,
   // SSL configuration
   ssl: configLoader.getConfig().kafka.ssl
     ? {
