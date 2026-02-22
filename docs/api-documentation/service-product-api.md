@@ -192,7 +192,7 @@ Content-Type: application/json
 ```json
 {
   "name": "Premium T-Shirt",
-  "price": 2999,
+  "price": 29.99,
   "stock": 100
 }
 ```
@@ -204,7 +204,7 @@ Creates a product with attributes (Size, Color) and variants (SKUs).
 ```json
 {
   "name": "Premium T-Shirt",
-  "price": 2999,
+  "price": 29.99,
   "attributes": [
     {
       "name": "Color",
@@ -220,7 +220,7 @@ Creates a product with attributes (Size, Color) and variants (SKUs).
   "variants": [
     {
       "sku": "TSHIRT-RED-S",
-      "price": 2999,
+      "price": 29.99,
       "stock": 10,
       "attributeValues": {
         "Color": "Red",
@@ -229,7 +229,7 @@ Creates a product with attributes (Size, Color) and variants (SKUs).
     },
     {
       "sku": "TSHIRT-BLUE-M",
-      "price": 3499,
+      "price": 34.99,
       "stock": 5,
       "attributeValues": {
         "Color": "Blue",
@@ -245,7 +245,7 @@ Creates a product with attributes (Size, Color) and variants (SKUs).
 | Field        | Type        | Required | Description                                              |
 | ------------ | ----------- | -------- | -------------------------------------------------------- |
 | `name`       | string      | ✅ Yes   | Product name (1-255 characters)                          |
-| `price`      | number      | ✅ Yes   | Base price in cents (positive integer)                   |
+| `price`      | number      | ✅ Yes   | Base price (decimal allowed, e.g. 29.99)                 |
 | `stock`      | number      | ❌ No    | Initial stock (default: 0). Ignored if variants present. |
 | `attributes` | Attribute[] | ❌ No    | List of product attributes (Required for variants)       |
 | `variants`   | Variant[]   | ❌ No    | List of product variants (SKUs)                          |
@@ -259,7 +259,11 @@ Creates a product with attributes (Size, Color) and variants (SKUs).
   "data": {
     "id": "770e8400-e29b-41d4-a716-446655440000",
     "name": "Premium T-Shirt",
-    "price": 2999,
+    "price": {
+      "min": 29.99,
+      "max": 34.99,
+      "display": "$29.99 - $34.99"
+    },
     "ownerId": "550e8400-e29b-41d4-a716-446655440000",
     "stock": 15,
     "hasVariant": true,
@@ -276,7 +280,7 @@ Creates a product with attributes (Size, Color) and variants (SKUs).
       {
         "id": "990e...",
         "sku": "TSHIRT-RED-S",
-        "price": 2999,
+        "price": 29.99,
         "stockQuantity": 10
       }
     ]
@@ -318,8 +322,8 @@ Authorization: Bearer <jwt-token>
 | `page`            | number  | `1`     | Page number                     |
 | `limit`           | number  | `10`    | Items per page                  |
 | `search`          | string  | `null`  | Search by product name          |
-| `minPrice`        | number  | `null`  | Minimum price filter (cents)    |
-| `maxPrice`        | number  | `null`  | Maximum price filter (cents)    |
+| `minPrice`        | number  | `null`  | Minimum price filter            |
+| `maxPrice`        | number  | `null`  | Maximum price filter            |
 | `hasVariant`      | boolean | `null`  | Filter by variable products     |
 | `inStock`         | boolean | `false` | Filter by stock availability    |
 | `includeVariants` | boolean | `false` | Include attributes & variants   |
@@ -336,7 +340,11 @@ Authorization: Bearer <jwt-token>
     {
       "id": "770e8400-e29b-41d4-a716-446655440000",
       "name": "Premium T-Shirt",
-      "price": 2999,
+      "price": {
+        "min": 29.99,
+        "max": 34.99,
+        "display": "$29.99 - $34.99"
+      },
       "ownerId": "550e8400-e29b-41d4-a716-446655440000",
       "stock": 100,
       "hasVariant": true,
@@ -383,7 +391,11 @@ Authorization: Bearer <jwt-token>
   "data": {
     "id": "770e8400-e29b-41d4-a716-446655440000",
     "name": "Premium T-Shirt",
-    "price": 2999,
+    "price": {
+      "min": 29.99,
+      "max": 34.99,
+      "display": "$29.99 - $34.99"
+    },
     "ownerId": "550e8400-e29b-41d4-a716-446655440000",
     "stock": 100,
     "hasVariant": true,
@@ -399,7 +411,7 @@ Authorization: Bearer <jwt-token>
       {
         "id": "var-1",
         "sku": "TSHIRT-S",
-        "price": 2999,
+        "price": 29.99,
         "stockQuantity": 50,
         "attributeValues": { "Size": "S" }
       }
@@ -434,11 +446,11 @@ Content-Type: application/json
 ```json
 {
   "name": "Premium T-Shirt V2",
-  "price": 3499,
+  "price": 34.99,
   "variants": [
     {
       "sku": "TSHIRT-S",
-      "price": 3499,
+      "price": 34.99,
       "stock": 45,
       "attributeValues": { "Size": "S" }
     }
@@ -457,6 +469,11 @@ Content-Type: application/json
   "data": {
     "id": "770e8400-e29b-41d4-a716-446655440000",
     "name": "Premium T-Shirt V2",
+    "price": {
+      "min": 34.99,
+      "max": 34.99,
+      "display": "$34.99"
+    },
     "updatedAt": "2026-02-21T10:05:00.000Z"
   }
 }
@@ -520,7 +537,7 @@ GET /products/search?q=t-shirt&includeDeleted=false HTTP/1.1
 interface Product {
   id: string; // UUID
   name: string; // 1-255 characters
-  price: number; // Price in cents
+  price: PriceRange; // Price object
   ownerId: string; // Owner UUID
   stock: number; // Current stock quantity
   hasVariant: boolean; // Has product variants
@@ -532,6 +549,16 @@ interface Product {
 }
 ```
 
+### PriceRange
+
+```typescript
+interface PriceRange {
+  min: number; // Minimum price
+  max: number; // Maximum price
+  display: string; // Formatted string (e.g. "$10.00 - $20.00")
+}
+```
+
 ### ProductVariant
 
 ```typescript
@@ -539,7 +566,7 @@ interface ProductVariant {
   id: string; // UUID
   productId: string;
   sku: string; // Unique SKU
-  price: number; // Variant price in cents
+  price: number; // Variant price
   stockQuantity: number;
   isActive: boolean;
   attributeValues: {
@@ -584,5 +611,5 @@ interface CreateProductRequest {
 
 ---
 
-**Last Updated:** 2026-02-21
-**Documentation Version:** 1.1.0
+**Last Updated:** 2026-02-22
+**Documentation Version:** 1.2.0

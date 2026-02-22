@@ -1,4 +1,4 @@
-import { boolean, index, integer, uuid, varchar } from 'drizzle-orm/pg-core';
+import { boolean, decimal, index, integer, uuid, varchar } from 'drizzle-orm/pg-core';
 import { BaseParanoidEntity, createParanoidTable } from '../../../helpers/schema/base-table';
 
 // Product table schema
@@ -9,7 +9,7 @@ export const products = createParanoidTable(
   'products',
   {
     name: varchar('name', { length: 255 }).notNull(),
-    price: integer('price').notNull(),
+    price: decimal('price', { precision: 10, scale: 2 }).notNull().$type<number>(),
     ownerId: uuid('owner_id').notNull(),
     // New fields for variant support
     stock: integer('stock').default(0).notNull(),

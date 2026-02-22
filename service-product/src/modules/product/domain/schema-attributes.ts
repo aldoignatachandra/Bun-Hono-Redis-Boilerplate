@@ -16,13 +16,18 @@ export const productAttributes = createParanoidTable(
     values: jsonb('values').notNull().$type<string[]>(),
     displayOrder: integer('display_order').default(0).notNull(),
   },
-  (table) => ({
+  table => ({
     productIdIdx: index('product_attributes_product_id_idx').on(table.productId),
-    productIdNameIdx: index('product_attributes_product_id_name_idx').on(table.productId, table.name),
+    productIdNameIdx: index('product_attributes_product_id_name_idx').on(
+      table.productId,
+      table.name
+    ),
   })
 );
 
 // TypeScript types
 export type ProductAttribute = typeof productAttributes.$inferSelect;
 export type NewProductAttribute = typeof productAttributes.$inferInsert;
-export type UpdateProductAttribute = Partial<Omit<ProductAttribute, 'id' | 'createdAt' | 'updatedAt'>>;
+export type UpdateProductAttribute = Partial<
+  Omit<ProductAttribute, 'id' | 'createdAt' | 'updatedAt'>
+>;

@@ -15,6 +15,13 @@
       "when": 1771666035284,
       "tag": "0001_needy_vertigo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771739434452,
+      "tag": "0002_condemned_longshot",
+      "breakpoints": true
     }
   ]
 }

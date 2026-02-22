@@ -842,4 +842,4 @@ console.log("Oldest user ID:", data.id);
 ---
 
 **Last Updated:** 2026-02-22
-**Documentation Version:** 1.0.0
+**Documentation Version:** 1.0.1

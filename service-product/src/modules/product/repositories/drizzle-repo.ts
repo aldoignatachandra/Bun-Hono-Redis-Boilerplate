@@ -1,24 +1,21 @@
-import { and, eq, gte, isNotNull, isNull, like, lte, asc } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, isNull, like, lte } from 'drizzle-orm';
 import { drizzleDb } from '../../../db/connection';
 import {
   products,
   type NewProduct,
-  type Product,
-  type UpdateProduct,
   type PriceRange,
-  type ProductResponse,
+  type Product,
   type ProductQueryOptions,
+  type UpdateProduct,
 } from '../domain/schema';
-import { productAttributes, type NewProductAttribute, type ProductAttribute } from '../domain/schema-attributes';
-import { productVariants, type NewProductVariant, type ProductVariant } from '../domain/schema-variants';
+import { productAttributes } from '../domain/schema-attributes';
+import { productVariants } from '../domain/schema-variants';
 import type {
-  CreateProductWithVariantsRequest,
-  UpdateProductWithVariantsRequest,
-  CreateAttributeRequest,
-  CreateVariantRequest,
   AttributeResponse,
-  VariantResponse,
+  CreateProductWithVariantsRequest,
   ProductWithVariantsResponse,
+  UpdateProductWithVariantsRequest,
+  VariantResponse,
 } from '../domain/types';
 
 export { type NewProduct, type Product, type UpdateProduct };
@@ -129,12 +126,15 @@ export class ProductRepository {
       conditions.push(gte(products.stock, 1));
     }
 
-    return this.db
+    const productList = await this.db
       .select()
       .from(products)
       .where(and(...conditions))
       .limit(limit)
       .offset(offset);
+
+    // Format all products to ensure price is an object
+    return productList.map(p => this.formatProductResponse(p, [], [])) as unknown as Product[];
   }
 
   async create(data: NewProduct): Promise<Product> {
@@ -221,7 +221,8 @@ export class ProductRepository {
 
     if (options.ownerId) conditions.push(eq(products.ownerId, options.ownerId));
     if (options.search) conditions.push(like(products.name, `%${options.search}%`));
-    if (options.hasVariant !== undefined) conditions.push(eq(products.hasVariant, options.hasVariant));
+    if (options.hasVariant !== undefined)
+      conditions.push(eq(products.hasVariant, options.hasVariant));
     if (options.inStock) conditions.push(gte(products.stock, 1));
     if (options.minPrice !== undefined) conditions.push(gte(products.price, options.minPrice));
     if (options.maxPrice !== undefined) conditions.push(lte(products.price, options.maxPrice));
@@ -252,7 +253,7 @@ export class ProductRepository {
   async createWithVariants(
     data: CreateProductWithVariantsRequest
   ): Promise<ProductWithVariantsResponse> {
-    return await this.db.transaction(async (tx) => {
+    return await this.db.transaction(async tx => {
       // 1. Validate price
       if (data.price <= 0) {
         throw new Error('Product price must be greater than 0');
@@ -329,10 +330,7 @@ export class ProductRepository {
       }
 
       // 5. Get updated product (trigger may have updated stock)
-      const [updatedProduct] = await tx
-        .select()
-        .from(products)
-        .where(eq(products.id, product.id));
+      const [updatedProduct] = await tx.select().from(products).where(eq(products.id, product.id));
 
       return this.formatProductResponse(updatedProduct, attributesResponse, variantsResponse);
     });
@@ -346,7 +344,7 @@ export class ProductRepository {
     id: string,
     data: UpdateProductWithVariantsRequest
   ): Promise<ProductWithVariantsResponse | null> {
-    return await this.db.transaction(async (tx) => {
+    return await this.db.transaction(async tx => {
       // 1. Check product exists
       const [existing] = await tx
         .select()
@@ -483,63 +481,71 @@ export class ProductRepository {
       }
 
       // 7. Get final product state
-      const [finalProduct] = await tx
-        .select()
-        .from(products)
-        .where(eq(products.id, id));
+      const [finalProduct] = await tx.select().from(products).where(eq(products.id, id));
 
       return this.formatProductResponse(finalProduct, attributesResponse, variantsResponse);
     });
   }
 
   // ============================================
-  // Helper: Format Product Response
+  //Helper: Format Product Response
   // ============================================
-
   private formatProductResponse(
     product: Product,
     attributes: AttributeResponse[],
     variants: VariantResponse[]
   ): ProductWithVariantsResponse {
-    // Calculate price
-    let price: number | PriceRange = product.price;
+    // Helper to ensure number
+    const toNum = (val: string | number | null | undefined): number => {
+      if (val === null || val === undefined) return 0;
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return isNaN(num) ? 0 : num;
+    };
 
-    // Calculate price range if has variants
-    if (product.hasVariant && variants.length > 0) {
-      const prices = variants
-        .map(v => v.price)
-        .filter((p): p is number => p !== null);
+    // ALWAYS calculate price as an object, even if no variants
+    let priceResponse: PriceRange;
+    const productPrice = toNum(product.price);
 
+    if (variants.length > 0) {
+      const prices = variants.map(v => toNum(v.price)).filter(p => p > 0);
       if (prices.length > 0) {
         const min = Math.min(...prices);
         const max = Math.max(...prices);
-        price = {
+        priceResponse = {
           min,
           max,
-          display: `$${(min / 100).toFixed(2)} - $${(max / 100).toFixed(2)}`,
+          display: min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} - $${max.toFixed(2)}`,
+        };
+      } else {
+        // Fallback if variants exist but have no valid prices (shouldn't happen with validation)
+        priceResponse = {
+          min: productPrice,
+          max: productPrice,
+          display: `$${productPrice.toFixed(2)}`,
         };
       }
+    } else {
+      // No variants: use product base price
+      priceResponse = {
+        min: productPrice,
+        max: productPrice,
+        display: `$${productPrice.toFixed(2)}`,
+      };
     }
 
-    const response: ProductWithVariantsResponse = {
+    return {
       id: product.id,
       name: product.name,
-      price,
+      price: priceResponse,
+      ownerId: product.ownerId,
       stock: product.stock,
       hasVariant: product.hasVariant,
-      ownerId: product.ownerId,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
       deletedAt: product.deletedAt,
+      attributes,
+      variants,
     };
-
-    // Include attributes and variants for variant products
-    if (product.hasVariant) {
-      response.attributes = attributes;
-      response.variants = variants;
-    }
-
-    return response;
   }
 }
 

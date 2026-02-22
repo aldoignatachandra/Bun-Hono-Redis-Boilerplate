@@ -63,7 +63,7 @@ export interface UpdateProductWithVariantsRequest {
 export interface ProductWithVariantsResponse {
   id: string;
   name: string;
-  price: number | PriceRange;
+  price: PriceRange;
   stock: number;
   hasVariant: boolean;
   ownerId: string;

@@ -6,7 +6,15 @@ This is a **high-performance, scalable microservices boilerplate** built with mo
 
 Designed for efficiency and developer experience, it features **Bun** for ultra-fast runtime performance, **Hono** for lightweight HTTP handling, and **Drizzle ORM** for type-safe, optimized database interactions.
 
-## 🛠️ Technology Stack
+## � Documentation
+
+Detailed API documentation for each service is available in the `docs/` directory:
+
+- [🔐 Auth Service API](docs/api-documentation/service-auth-api.md)
+- [📦 Product Service API](docs/api-documentation/service-product-api.md)
+- [👤 User Service API](docs/api-documentation/service-user-api.md)
+
+## �🛠️ Technology Stack
 
 ### ⚡ Runtime & Web Framework
 
@@ -28,6 +36,7 @@ Designed for efficiency and developer experience, it features **Bun** for ultra-
   - **Pagination**: All list endpoints support `limit` and `offset`.
   - **Filtering**: efficient DB-level filtering (no in-memory processing).
   - **Paranoid Deletes**: Soft-delete support with `deletedAt` columns.
+  - **Decimal Pricing**: Precise financial calculations using `DECIMAL(10,2)`.
 
 ### 📨 Messaging
 
@@ -36,9 +45,10 @@ Designed for efficiency and developer experience, it features **Bun** for ultra-
 
 ### 🔐 Security
 
-- **🎫 JWT**: Stateless authentication.
+- **🎫 JWT**: Stateless authentication tokens with stateful session validation.
 - **🛡️ RBAC**: Role-Based Access Control (`ADMIN`, `USER`).
 - **🔑 Bcrypt**: Secure password hashing.
+- **🚫 Single Session**: Enforced single active session policy per user.
 
 ---
 
@@ -57,11 +67,13 @@ graph TB
         C --> H[🔐 Auth Service<br/>:3100]
         D <--> F[🎭 Kafka Cluster]
         E <--> F
+        H <--> F
     end
 
     subgraph "Data Layer"
         D --> G[🐘 PostgreSQL]
         E --> G
+        H --> G
     end
 
     style A fill:#e1f5fe
@@ -95,18 +107,19 @@ graph TB
 ```bash
 bun-hono-kafkajs-boilerplate/
 ├── infra/                 # Docker & Kafka config
-├── service-user/          # 👤 User Management & Auth
+├── docs/                  # 📚 API Documentation
+├── service-user/          # 👤 User Management (Port 3101)
 │   ├── src/
 │   │   ├── modules/user/
 │   │   │   ├── handlers/  # HTTP Controllers
 │   │   │   ├── repositories/ # Drizzle & Commands/Queries
 │   │   │   └── domain/    # Schema & Types
-├── service-product/       # 📦 Product Catalog
+├── service-product/       # 📦 Product Catalog (Port 3102)
 │   ├── src/
 │   │   ├── modules/product/
 │   │   │   ├── handlers/
 │   │   │   └── repositories/
-├── service-auth/          # 🔐 Centralized Auth Gateway
+├── service-auth/          # 🔐 Auth Gateway (Port 3100)
 └── .trae/                 # 🤖 AI Rules & Guidelines
 ```
 
@@ -142,13 +155,21 @@ Ensure `KAFKA_BROKERS=localhost:19092,localhost:29092` in all `.env` files.
 ### 3. Start Infrastructure
 
 ```bash
-# Start Postgres & Kafka
-docker compose -f infra/docker/compose/dev.yml up -d
+# Start Postgres & Kafka (Infrastructure Only)
+docker compose -f infra/docker/compose/dev.yml up -d postgres kafka-1 kafka-2
 ```
 
 ### 4. Database Setup (Production-Grade)
 
-We use **Drizzle Migrations** instead of `db:push` for better control and production readiness.
+We use **Drizzle Migrations** for schema management.
+
+> **Workflow:**
+>
+> 1. Edit schema (`domain/schema.ts`)
+> 2. `bun run db:generate` (Create SQL)
+> 3. `bun run db:migrate` (Apply SQL)
+
+**Initial Setup:**
 
 ```bash
 # User Service (Auth & Users)
@@ -160,6 +181,7 @@ cd ..
 # Product Service
 cd service-product
 bun run db:setup     # Runs db:create && db:migrate
+bun run db:seed      # Seeds products with decimal prices
 cd ..
 
 # Auth Service (Gateway Session Store)
@@ -169,7 +191,6 @@ cd ..
 ```
 
 > **Tip:** You can use `bun run db:reset` to drop and re-create the database in any service.
-
 
 ### 5. Run Services
 
@@ -192,20 +213,26 @@ cd service-auth && bun run dev
 
 **Login (Get Token)**
 
+> Uses **Basic Auth** header. Port **3100**.
+
 ```bash
-curl -X POST http://localhost:3101/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "admin@example.com", "password": "admin"}'
+# Email: admin@example.com, Password: admin
+# Base64("admin@example.com:admin") = YWRtaW5AZXhhbXBsZS5jb206YWRtaW4=
+
+curl -X POST http://localhost:3100/auth/login \
+  -H "Authorization: Basic YWRtaW5AZXhhbXBsZS5jb206YWRtaW4="
 ```
 
-_Response:_ `{ "token": "eyJ...", "user": { ... } }`
+_Response:_ `{ "success": true, "data": { "token": "eyJ...", "user": { ... } } }`
 
 ### Product Management (Optimized)
 
 **Get Products (Filtered & Paginated)**
 
+> Port **3102**.
+
 ```bash
-curl "http://localhost:3102/products?page=1&limit=5&search=laptop&minPrice=1000" \
+curl "http://localhost:3102/products?page=1&limit=5&search=shirt&minPrice=19.99" \
   -H "Authorization: Bearer <TOKEN>"
 ```
 
@@ -214,12 +241,15 @@ curl "http://localhost:3102/products?page=1&limit=5&search=laptop&minPrice=1000"
 - `page`: Page number (default: 1)
 - `limit`: Items per page (default: 10)
 - `search`: Filter by name (case-insensitive)
-- `minPrice` / `maxPrice`: Price range filter
+- `minPrice` / `maxPrice`: Price range filter (Decimal, e.g. 19.99)
 - `includeDeleted`: Include soft-deleted items (boolean)
+- `includeVariants`: Include SKU details (boolean)
 
 ### User Management (Admin Only)
 
 **List Users**
+
+> Port **3101**.
 
 ```bash
 curl "http://localhost:3101/admin/users?page=1&limit=20" \
@@ -235,6 +265,7 @@ curl "http://localhost:3101/admin/users?page=1&limit=20" \
 3.  **Clean Architecture**: Separation of `Handlers` (HTTP), `Commands` (Write Logic), `Queries` (Read Logic), and `Repositories` (Data Access).
 4.  **Type Safety**: Full TypeScript strict mode compliance.
 5.  **Validation**: Zod schemas for all request bodies.
+6.  **Decimal Precision**: Financial data uses exact decimal types, avoiding floating-point errors.
 
 ## 🤝 Contributing
 

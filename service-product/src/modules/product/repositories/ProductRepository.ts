@@ -1,15 +1,15 @@
 import { Service } from 'typedi';
+import type {
+  CreateProductWithVariantsRequest,
+  ProductWithVariantsResponse,
+  UpdateProductWithVariantsRequest,
+} from '../domain/types';
 import {
   ProductRepository as DrizzleProductRepository,
   type NewProduct,
   type Product as ProductResponse,
   type UpdateProduct,
 } from './drizzle-repo';
-import type {
-  CreateProductWithVariantsRequest,
-  UpdateProductWithVariantsRequest,
-  ProductWithVariantsResponse,
-} from '../domain/types';
 
 export interface ProductRepositoryOptions {
   includeDeleted?: boolean;
@@ -30,7 +30,12 @@ export class ProductRepository {
     this.drizzleProductRepo = new DrizzleProductRepository();
   }
 
-  async create(data: { name: string; price: number; ownerId: string; stock?: number }): Promise<ProductResponse> {
+  async create(data: {
+    name: string;
+    price: number;
+    ownerId: string;
+    stock?: number;
+  }): Promise<ProductResponse> {
     return this.drizzleProductRepo.create(data as NewProduct) as Promise<ProductResponse>;
   }
 
@@ -55,19 +60,17 @@ export class ProductRepository {
     return this.drizzleProductRepo.findByIdWithVariants(id);
   }
 
-  async findWithFiltersAndVariants(
-    options: {
-      ownerId?: string;
-      search?: string;
-      hasVariant?: boolean;
-      inStock?: boolean;
-      minPrice?: number;
-      maxPrice?: number;
-      includeVariants?: boolean;
-      limit?: number;
-      offset?: number;
-    }
-  ): Promise<ProductWithVariantsResponse[]> {
+  async findWithFiltersAndVariants(options: {
+    ownerId?: string;
+    search?: string;
+    hasVariant?: boolean;
+    inStock?: boolean;
+    minPrice?: number;
+    maxPrice?: number;
+    includeVariants?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<ProductWithVariantsResponse[]> {
     return this.drizzleProductRepo.findWithFiltersAndVariants(options);
   }
 
@@ -170,26 +173,6 @@ export class ProductRepository {
     });
   }
 
-  async searchProducts(
-    query: string,
-    options: ProductRepositoryOptions = {}
-  ): Promise<ProductResponse[]> {
-    return this.findWithFilters({
-      search: query,
-      includeDeleted: options.includeDeleted,
-      onlyDeleted: options.onlyDeleted,
-      limit: options.limit,
-      offset: options.offset,
-    });
-  }
-
-  async searchProductsWithDeleted(
-    query: string,
-    options: ProductRepositoryOptions = {}
-  ): Promise<ProductResponse[]> {
-    return this.searchProducts(query, { ...options, includeDeleted: true });
-  }
-
   async findByPriceRange(
     range: { min?: number; max?: number },
     options: ProductRepositoryOptions = {}
@@ -228,9 +211,7 @@ export class ProductRepository {
     });
   }
 
-  async findInStock(
-    options: ProductRepositoryOptions = {}
-  ): Promise<ProductResponse[]> {
+  async findInStock(options: ProductRepositoryOptions = {}): Promise<ProductResponse[]> {
     return this.findWithFilters({
       inStock: true,
       includeDeleted: options.includeDeleted,

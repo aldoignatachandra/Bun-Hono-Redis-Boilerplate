@@ -29,6 +29,16 @@ interface OldestUserResponse {
 }
 
 /**
+ * Helper to safely format price for display
+ * Handles both number and string (from decimal column) inputs
+ */
+function formatPrice(price: number | string | null | undefined): string {
+  if (price === null || price === undefined) return '0.00';
+  const num = typeof price === 'string' ? parseFloat(price) : price;
+  return isNaN(num) ? '0.00' : num.toFixed(2);
+}
+
+/**
  * Fetches the oldest active USER from the user service via API.
  *
  * This is the ONLY method to obtain a valid owner ID for products.
@@ -147,7 +157,7 @@ async function seed() {
         .insert(products)
         .values({
           name: simpleProductName,
-          price: 1999, // $19.99
+          price: 19.99, // Decimal price
           ownerId: ownerId,
           stock: 150,
           hasVariant: false,
@@ -157,7 +167,7 @@ async function seed() {
       logger.info('✅ Simple product created:');
       logger.info(`   ID: ${simpleProduct.id}`);
       logger.info(`   Name: ${simpleProduct.name}`);
-      logger.info(`   Price: $${(simpleProduct.price / 100).toFixed(2)}`);
+      logger.info(`   Price: $${formatPrice(simpleProduct.price)}`);
       logger.info(`   Stock: ${simpleProduct.stock}`);
       logger.info(`   Has Variants: ${simpleProduct.hasVariant}`);
       logger.info(`   Owner ID: ${ownerId}`);
@@ -185,7 +195,7 @@ async function seed() {
         .insert(products)
         .values({
           name: variantProductName,
-          price: 2999, // $29.99 base price
+          price: 29.99, // Decimal base price
           ownerId: ownerId,
           stock: 0, // Will be updated by trigger
           hasVariant: true,
@@ -216,13 +226,14 @@ async function seed() {
       logger.info('     - Size (S, M, L, XL)');
 
       // Create variants
+      // Updated with decimal prices
       const variantData = [
-        { sku: 'TSHIRT-RED-S', price: 2999, stock: 50, color: 'Red', size: 'S' },
-        { sku: 'TSHIRT-RED-M', price: 2999, stock: 75, color: 'Red', size: 'M' },
-        { sku: 'TSHIRT-BLUE-M', price: 3499, stock: 60, color: 'Blue', size: 'M' },
-        { sku: 'TSHIRT-BLUE-L', price: 3499, stock: 40, color: 'Blue', size: 'L' },
-        { sku: 'TSHIRT-BLACK-L', price: 3999, stock: 30, color: 'Black', size: 'L' },
-        { sku: 'TSHIRT-BLACK-XL', price: 3999, stock: 25, color: 'Black', size: 'XL' },
+        { sku: 'TSHIRT-RED-S', price: 29.99, stock: 50, color: 'Red', size: 'S' },
+        { sku: 'TSHIRT-RED-M', price: 29.99, stock: 75, color: 'Red', size: 'M' },
+        { sku: 'TSHIRT-BLUE-M', price: 34.99, stock: 60, color: 'Blue', size: 'M' },
+        { sku: 'TSHIRT-BLUE-L', price: 34.99, stock: 40, color: 'Blue', size: 'L' },
+        { sku: 'TSHIRT-BLACK-L', price: 39.99, stock: 30, color: 'Black', size: 'L' },
+        { sku: 'TSHIRT-BLACK-XL', price: 39.99, stock: 25, color: 'Black', size: 'XL' },
       ];
 
       const insertedVariants = await drizzleDb
@@ -241,9 +252,7 @@ async function seed() {
 
       logger.info(`   Variants: ${insertedVariants.length} SKUs created`);
       insertedVariants.forEach(v => {
-        logger.info(
-          `     - ${v.sku}: $${((v.price || 0) / 100).toFixed(2)} (stock: ${v.stockQuantity})`
-        );
+        logger.info(`     - ${v.sku}: $${formatPrice(v.price)} (stock: ${v.stockQuantity})`);
       });
 
       // Get updated product (trigger should have updated stock if it exists)

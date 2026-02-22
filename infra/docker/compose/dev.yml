@@ -65,6 +65,7 @@ services:
       NODE_ENV: dev
       JWT_SECRET: supersecret-change-me-in-production
       AUTH_SERVICE_PORT: 3100
+      PORT: 3100
     ports:
       - "3100:3100"
     networks:

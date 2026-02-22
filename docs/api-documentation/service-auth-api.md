@@ -38,7 +38,7 @@ The Auth Service is responsible for:
 | **Single Session**   | Only one active session per user        |
 | **Basic Auth**       | User credentials for login              |
 | **System Auth**      | Service-to-service authentication       |
-| **Activity Logging** | Login/logout events logged              |
+| **Activity Logging** | Login/logout events logged via Kafka    |
 
 ---
 
@@ -588,4 +588,4 @@ components:
 ---
 
 **Last Updated:** 2026-02-22
-**Documentation Version:** 1.0.0
+**Documentation Version:** 1.0.1

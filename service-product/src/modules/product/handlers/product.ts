@@ -67,8 +67,7 @@ productRoutes.get('/products', async c => {
 
     const getProductQuery = Container.get(GetProductQuery);
 
-    const products = await getProductQuery.executeWithFilters({
-      ownerId: user.sub,
+    const filterOptions: any = {
       search,
       minPrice,
       maxPrice,
@@ -76,7 +75,16 @@ productRoutes.get('/products', async c => {
       onlyDeleted,
       limit,
       offset,
-    });
+    };
+
+    // Strict IDOR Check:
+    // If user is NOT admin, force ownerId filter to current user.
+    // If user IS admin, do NOT force ownerId (allow seeing all products).
+    if (user.role !== 'ADMIN') {
+      filterOptions.ownerId = user.sub;
+    }
+
+    const products = await getProductQuery.executeWithFilters(filterOptions);
 
     return successResponse(c, products, 'Products fetched successfully', 200, {
       includeDeleted,
@@ -101,16 +109,22 @@ productRoutes.get('/products/:id', async c => {
 
     const getProductQuery = Container.get(GetProductQuery);
 
+    // If product has variants, we should fetch them
     const product = includeDeleted
-      ? await getProductQuery.executeWithDeleted(productId)
-      : await getProductQuery.execute(productId);
+      ? await getProductQuery.executeWithDeleted(productId, { includeVariants: true })
+      : await getProductQuery.execute(productId, { includeVariants: true });
 
     if (!product) {
       return errorResponse(c, 'Product not found', 'PRODUCT_NOT_FOUND', 404);
     }
 
+    // Strict IDOR Check:
+    // 1. Fetch product first (including deleted if requested)
+    // 2. If User -> MUST be owner (ownerId === user.sub)
+    // 3. If Admin -> Can access ANY product (no ownership check needed)
+
     // Check ownership for non-admin users
-    if (product.ownerId !== user.sub && user.role !== 'ADMIN') {
+    if (user.role !== 'ADMIN' && product.ownerId !== user.sub) {
       return errorResponse(c, 'Access denied', 'ACCESS_DENIED', 403);
     }
 
@@ -128,6 +142,23 @@ productRoutes.patch('/products/:id', async c => {
     const body = await c.req.json();
     const validatedData = UpdateProductSchema.parse(body);
 
+    // Strict IDOR Check: Only OWNER can update. Admin CANNOT update user products.
+    const getProductQuery = Container.get(GetProductQuery);
+    const existingProduct = await getProductQuery.execute(productId);
+
+    if (!existingProduct) {
+      return errorResponse(c, 'Product not found', 'PRODUCT_NOT_FOUND', 404);
+    }
+
+    if (existingProduct.ownerId !== user.sub) {
+      return errorResponse(
+        c,
+        'Access denied. Only owner can update product.',
+        'ACCESS_DENIED',
+        403
+      );
+    }
+
     const updateProductCommand = Container.get(UpdateProductCommand);
     const product = await updateProductCommand.execute(productId, validatedData, user.sub);
 
@@ -143,6 +174,25 @@ productRoutes.delete('/products/:id', async c => {
     const user = c.get('user');
     const productId = c.req.param('id');
     const force = c.req.query('force') === 'true';
+
+    // Strict IDOR Check: Only OWNER can delete. Admin CANNOT delete user products.
+    const getProductQuery = Container.get(GetProductQuery);
+
+    // Use executeWithDeleted to check if it exists at all before checking ownership
+    const existingProduct = await getProductQuery.executeWithDeleted(productId);
+
+    if (!existingProduct) {
+      return errorResponse(c, 'Product not found', 'PRODUCT_NOT_FOUND', 404);
+    }
+
+    if (existingProduct.ownerId !== user.sub) {
+      return errorResponse(
+        c,
+        'Access denied. Only owner can delete product.',
+        'ACCESS_DENIED',
+        403
+      );
+    }
 
     const deleteProductCommand = Container.get(DeleteProductCommand);
     await deleteProductCommand.execute(productId, user.sub, force);
@@ -166,6 +216,23 @@ productRoutes.post('/products/:id/restore', async c => {
     const user = c.get('user');
     const productId = c.req.param('id');
 
+    // Strict IDOR Check: Only OWNER can restore. Admin CANNOT restore user products.
+    const getProductQuery = Container.get(GetProductQuery);
+    const existingProduct = await getProductQuery.executeWithDeleted(productId);
+
+    if (!existingProduct) {
+      return errorResponse(c, 'Product not found', 'PRODUCT_NOT_FOUND', 404);
+    }
+
+    if (existingProduct.ownerId !== user.sub) {
+      return errorResponse(
+        c,
+        'Access denied. Only owner can restore product.',
+        'ACCESS_DENIED',
+        403
+      );
+    }
+
     const restoreProductCommand = Container.get(RestoreProductCommand);
     const restoredProduct = await restoreProductCommand.execute(productId, user.sub);
 
@@ -175,45 +242,6 @@ productRoutes.post('/products/:id/restore', async c => {
       return errorResponse(c, 'Product not found or access denied', 'PRODUCT_NOT_FOUND', 404);
     }
     return errorResponse(c, 'Failed to restore product', 'PRODUCT_RESTORE_FAILED', 500, error);
-  }
-});
-
-// Search products with paranoid support
-productRoutes.get('/products/search', async c => {
-  try {
-    const user = c.get('user');
-    const query = c.req.query('q');
-    const includeDeleted = c.req.query('includeDeleted') === 'true';
-    const onlyDeleted = c.req.query('onlyDeleted') === 'true';
-
-    if (!query) {
-      return errorResponse(c, 'Search query is required', 'MISSING_SEARCH_QUERY', 400);
-    }
-
-    const getProductQuery = Container.get(GetProductQuery);
-
-    let products;
-    if (onlyDeleted) {
-      products = await getProductQuery.executeSearchWithDeleted(query);
-    } else if (includeDeleted) {
-      products = await getProductQuery.executeSearchWithDeleted(query);
-    } else {
-      products = await getProductQuery.executeSearch(query);
-    }
-
-    // Filter by ownership for non-admin users
-    if (user.role !== 'ADMIN') {
-      products = products.filter(product => product.ownerId === user.sub);
-    }
-
-    return successResponse(c, products, 'Products searched successfully', 200, {
-      query,
-      includeDeleted,
-      onlyDeleted,
-      count: products.length,
-    });
-  } catch (error) {
-    return errorResponse(c, 'Failed to search products', 'PRODUCT_SEARCH_FAILED', 500, error);
   }
 });
 
