@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import { errorResponse, successResponse } from '../../../helpers/api-response';
 import { getRequestMetadata } from '../../../helpers/request-metadata';
 import { auth } from '../../../middlewares/auth';
+import { rateLimiter } from '../../../middlewares/rate-limit';
 import { CreateProductCommand } from '../repositories/commands/CreateProductCommand';
 import { DeleteProductCommand } from '../repositories/commands/DeleteProductCommand';
 import { RestoreProductCommand } from '../repositories/commands/RestoreProductCommand';
@@ -26,91 +27,107 @@ declare module 'hono' {
 
 const productRoutes = new Hono();
 
+// Product routes rate limits
+const rateLimits = {
+  create: { maxRequests: 20, windowSeconds: 60 },
+  list: { maxRequests: 120, windowSeconds: 60 },
+  update: { maxRequests: 30, windowSeconds: 60 },
+  remove: { maxRequests: 10, windowSeconds: 60 },
+};
+
 // Authentication middleware for all product routes
 productRoutes.use('/products/*', auth);
 
 // Create product
-productRoutes.post('/products', async c => {
-  try {
-    const user = c.get('user');
-    const body = await c.req.json();
-    const validatedData = createProductSchema.parse(body);
-    const metadata = getRequestMetadata(c);
+productRoutes.post(
+  '/products',
+  rateLimiter(rateLimits.create.maxRequests, rateLimits.create.windowSeconds),
+  async c => {
+    try {
+      const user = c.get('user');
+      const body = await c.req.json();
+      const validatedData = createProductSchema.parse(body);
+      const metadata = getRequestMetadata(c);
 
-    const createProductCommand = Container.get(CreateProductCommand);
-    // Force cast to correct type since zod validation ensures structure but types might be loose
-    const createData: any = validatedData;
-    const product = await createProductCommand.execute(
-      {
-        ...createData,
-        ownerId: user.sub,
-      },
-      metadata
-    );
+      const createProductCommand = Container.get(CreateProductCommand);
+      // Force cast to correct type since zod validation ensures structure but types might be loose
+      const createData: any = validatedData;
+      const product = await createProductCommand.execute(
+        {
+          ...createData,
+          ownerId: user.sub,
+        },
+        metadata
+      );
 
-    return successResponse(c, product, 'Product created successfully', 201);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      return errorResponse(c, 'Validation failed', 'VALIDATION_ERROR', 400, error.errors);
+      return successResponse(c, product, 'Product created successfully', 201);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return errorResponse(c, 'Validation failed', 'VALIDATION_ERROR', 400, error.errors);
+      }
+      return errorResponse(c, 'Failed to create product', 'PRODUCT_CREATE_FAILED', 400, error);
     }
-    return errorResponse(c, 'Failed to create product', 'PRODUCT_CREATE_FAILED', 400, error);
   }
-});
+);
 
 // Get user's products with paranoid support
-productRoutes.get('/products', async c => {
-  try {
-    const user = c.get('user');
-    const includeDeleted = c.req.query('includeDeleted') === 'true';
-    const onlyDeleted = c.req.query('onlyDeleted') === 'true';
-    const search = c.req.query('search');
-    const minPrice = c.req.query('minPrice') ? parseFloat(c.req.query('minPrice')!) : undefined;
-    const maxPrice = c.req.query('maxPrice') ? parseFloat(c.req.query('maxPrice')!) : undefined;
-    const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '10');
-    const offset = (page - 1) * limit;
+productRoutes.get(
+  '/products',
+  rateLimiter(rateLimits.list.maxRequests, rateLimits.list.windowSeconds),
+  async c => {
+    try {
+      const user = c.get('user');
+      const includeDeleted = c.req.query('includeDeleted') === 'true';
+      const onlyDeleted = c.req.query('onlyDeleted') === 'true';
+      const search = c.req.query('search');
+      const minPrice = c.req.query('minPrice') ? parseFloat(c.req.query('minPrice')!) : undefined;
+      const maxPrice = c.req.query('maxPrice') ? parseFloat(c.req.query('maxPrice')!) : undefined;
+      const page = parseInt(c.req.query('page') || '1');
+      const limit = parseInt(c.req.query('limit') || '10');
+      const offset = (page - 1) * limit;
 
-    const getProductQuery = Container.get(GetProductQuery);
+      const getProductQuery = Container.get(GetProductQuery);
 
-    const filterOptions: any = {
-      search,
-      minPrice,
-      maxPrice,
-      includeDeleted,
-      onlyDeleted,
-      limit,
-      offset,
-    };
+      const filterOptions: any = {
+        search,
+        minPrice,
+        maxPrice,
+        includeDeleted,
+        onlyDeleted,
+        limit,
+        offset,
+      };
 
-    // Strict IDOR Check:
-    // If user is NOT admin, force ownerId filter to current user.
-    // If user IS admin, do NOT force ownerId (allow seeing all products).
-    if (user.role !== 'ADMIN') {
-      filterOptions.ownerId = user.sub;
+      // Strict IDOR Check:
+      // If user is NOT admin, force ownerId filter to current user.
+      // If user IS admin, do NOT force ownerId (allow seeing all products).
+      if (user.role !== 'ADMIN') {
+        filterOptions.ownerId = user.sub;
+      }
+
+      const { data, total } = await getProductQuery.executeWithFilters(filterOptions);
+
+      const totalPages = Math.ceil(total / limit);
+      const hasNextPage = page < totalPages;
+      const hasPreviousPage = page > 1;
+
+      return successResponse(c, data, 'Products fetched successfully', 200, {
+        includeDeleted,
+        onlyDeleted,
+        search,
+        priceRange: { min: minPrice, max: maxPrice },
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage,
+        hasPreviousPage,
+      });
+    } catch (error) {
+      return errorResponse(c, 'Failed to fetch products', 'PRODUCT_FETCH_FAILED', 500, error);
     }
-
-    const { data, total } = await getProductQuery.executeWithFilters(filterOptions);
-
-    const totalPages = Math.ceil(total / limit);
-    const hasNextPage = page < totalPages;
-    const hasPreviousPage = page > 1;
-
-    return successResponse(c, data, 'Products fetched successfully', 200, {
-      includeDeleted,
-      onlyDeleted,
-      search,
-      priceRange: { min: minPrice, max: maxPrice },
-      page,
-      limit,
-      total,
-      totalPages,
-      hasNextPage,
-      hasPreviousPage,
-    });
-  } catch (error) {
-    return errorResponse(c, 'Failed to fetch products', 'PRODUCT_FETCH_FAILED', 500, error);
   }
-});
+);
 
 // Get product by ID with paranoid support
 productRoutes.get('/products/:id', async c => {
@@ -147,90 +164,98 @@ productRoutes.get('/products/:id', async c => {
 });
 
 // Update product (owner only)
-productRoutes.patch('/products/:id', async c => {
-  try {
-    const user = c.get('user');
-    const productId = c.req.param('id');
-    const body = await c.req.json();
-    const validatedData = updateProductSchema.parse(body);
+productRoutes.patch(
+  '/products/:id',
+  rateLimiter(rateLimits.update.maxRequests, rateLimits.update.windowSeconds),
+  async c => {
+    try {
+      const user = c.get('user');
+      const productId = c.req.param('id');
+      const body = await c.req.json();
+      const validatedData = updateProductSchema.parse(body);
 
-    // Strict IDOR Check: Only OWNER can update. Admin CANNOT update user products.
-    const getProductQuery = Container.get(GetProductQuery);
-    const existingProduct = await getProductQuery.execute(productId);
+      // Strict IDOR Check: Only OWNER can update. Admin CANNOT update user products.
+      const getProductQuery = Container.get(GetProductQuery);
+      const existingProduct = await getProductQuery.execute(productId);
 
-    if (!existingProduct) {
-      return errorResponse(c, 'Product not found', 'PRODUCT_NOT_FOUND', 404);
+      if (!existingProduct) {
+        return errorResponse(c, 'Product not found', 'PRODUCT_NOT_FOUND', 404);
+      }
+
+      if (existingProduct.ownerId !== user.sub) {
+        return errorResponse(
+          c,
+          'Access denied. Only owner can update product.',
+          'ACCESS_DENIED',
+          403
+        );
+      }
+
+      const updateProductCommand = Container.get(UpdateProductCommand);
+      // Force cast to correct type since zod validation ensures structure but types might be loose
+      const updateData: any = validatedData;
+      const product = await updateProductCommand.execute(productId, updateData, user.sub);
+
+      return successResponse(c, product, 'Product updated successfully');
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return errorResponse(c, 'Validation failed', 'VALIDATION_ERROR', 400, error.errors);
+      }
+      return errorResponse(c, 'Failed to update product', 'PRODUCT_UPDATE_FAILED', 400, error);
     }
-
-    if (existingProduct.ownerId !== user.sub) {
-      return errorResponse(
-        c,
-        'Access denied. Only owner can update product.',
-        'ACCESS_DENIED',
-        403
-      );
-    }
-
-    const updateProductCommand = Container.get(UpdateProductCommand);
-    // Force cast to correct type since zod validation ensures structure but types might be loose
-    const updateData: any = validatedData;
-    const product = await updateProductCommand.execute(productId, updateData, user.sub);
-
-    return successResponse(c, product, 'Product updated successfully');
-  } catch (error) {
-    if (error instanceof ZodError) {
-      return errorResponse(c, 'Validation failed', 'VALIDATION_ERROR', 400, error.errors);
-    }
-    return errorResponse(c, 'Failed to update product', 'PRODUCT_UPDATE_FAILED', 400, error);
   }
-});
+);
 
 // Delete product (owner only) with paranoid support
-productRoutes.delete('/products/:id', async c => {
-  try {
-    const user = c.get('user');
-    const productId = c.req.param('id');
-    const force = c.req.query('force') === 'true';
+productRoutes.delete(
+  '/products/:id',
+  rateLimiter(rateLimits.remove.maxRequests, rateLimits.remove.windowSeconds),
+  async c => {
+    try {
+      const user = c.get('user');
+      const productId = c.req.param('id');
+      const force = c.req.query('force') === 'true';
 
-    // Strict IDOR Check: Only OWNER can delete. Admin CANNOT delete user products.
-    const getProductQuery = Container.get(GetProductQuery);
+      // Strict IDOR Check: Only OWNER can delete. Admin CANNOT delete user products.
+      const getProductQuery = Container.get(GetProductQuery);
 
-    // Use executeWithDeleted to check if it exists at all before checking ownership
-    const existingProduct = await getProductQuery.executeWithDeleted(productId);
+      // Use executeWithDeleted to check if it exists at all before checking ownership
+      const existingProduct = await getProductQuery.executeWithDeleted(productId);
 
-    if (!existingProduct) {
-      return errorResponse(c, 'Product not found', 'PRODUCT_NOT_FOUND', 404);
-    }
-
-    if (existingProduct.ownerId !== user.sub) {
-      return errorResponse(
-        c,
-        'Access denied. Only owner can delete product.',
-        'ACCESS_DENIED',
-        403
-      );
-    }
-
-    const deleteProductCommand = Container.get(DeleteProductCommand);
-    await deleteProductCommand.execute(productId, user.sub, force);
-
-    return successResponse(
-      c,
-      {
-        productId,
-        force,
-      },
-      force ? 'Product permanently deleted' : 'Product soft deleted'
-    );
-  } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Product already deleted') {
-        return errorResponse(c, 'Product already deleted', 'PRODUCT_ALREADY_DELETED', 400);
+      if (!existingProduct) {
+        return errorResponse(c, 'Product not found', 'PRODUCT_NOT_FOUND', 404);
       }
+
+      if (existingProduct.ownerId !== user.sub) {
+        return errorResponse(
+          c,
+          'Access denied. Only owner can delete product.',
+          'ACCESS_DENIED',
+          403
+        );
+      }
+
+      const deleteProductCommand = Container.get(DeleteProductCommand);
+      await deleteProductCommand.execute(productId, user.sub, force);
+
+      return successResponse(
+        c,
+        {
+          productId,
+          force,
+        },
+        force ? 'Product permanently deleted' : 'Product soft deleted'
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'Product already deleted') {
+          return errorResponse(c, 'Product already deleted', 'PRODUCT_ALREADY_DELETED', 400);
+        }
+      }
+      return errorResponse(c, 'Failed to delete product', 'PRODUCT_DELETE_FAILED', 400, error);
     }
-    return errorResponse(c, 'Failed to delete product', 'PRODUCT_DELETE_FAILED', 400, error);
   }
-});
+);
 
 // Restore soft-deleted product (owner only)
 productRoutes.post('/products/:id/restore', async c => {

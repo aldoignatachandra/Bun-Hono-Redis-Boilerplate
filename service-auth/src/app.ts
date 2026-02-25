@@ -5,10 +5,17 @@ import { configLoader } from './config/loader';
 import { successResponse } from './helpers/api-response';
 import { auth } from './middlewares/auth';
 import { basicAuthMiddleware } from './middlewares/basic-auth';
+import { rateLimiter } from './middlewares/rate-limit';
 import { systemAuthMiddleware } from './middlewares/system-auth';
 import { loginHandler, logoutHandler } from './modules/auth/handlers/auth';
 
 const app = new Hono();
+
+// Auth routes rate limits
+const rateLimits = {
+  login: { maxRequests: 10, windowSeconds: 60 },
+  logout: { maxRequests: 30, windowSeconds: 60 },
+};
 
 // Middleware
 app.use('*', cors());
@@ -47,10 +54,20 @@ app.get('/admin/health', systemAuthMiddleware, c => {
 // Authentication Routes
 
 // Login: Protected by User Basic Auth Middleware (validates against DB)
-app.post('/auth/login', basicAuthMiddleware, loginHandler);
+app.post(
+  '/auth/login',
+  rateLimiter(rateLimits.login.maxRequests, rateLimits.login.windowSeconds),
+  basicAuthMiddleware,
+  loginHandler
+);
 
 // Logout: Protected by JWT Auth Middleware (validates session token)
-app.post('/auth/logout', auth, logoutHandler);
+app.post(
+  '/auth/logout',
+  auth,
+  rateLimiter(rateLimits.logout.maxRequests, rateLimits.logout.windowSeconds),
+  logoutHandler
+);
 
 // Gateway routes placeholder
 app.get('/', c => {

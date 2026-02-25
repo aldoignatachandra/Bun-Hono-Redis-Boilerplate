@@ -113,4 +113,26 @@ describe('app', () => {
     });
     expect(res.status).toBe(200);
   });
+
+  it('returns health status when database is connected', async () => {
+    const { default: app } = await appPromise;
+    const res = await app.request('/health');
+    const body = (await res.json()) as { success: boolean };
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+  });
+
+  it('returns unhealthy status when database is disconnected', async () => {
+    const connection = await import('../src/db/connection');
+    const dbHealth = connection.checkDatabaseHealth as unknown as {
+      mock: { resolvedValues: unknown[] };
+      mockResolvedValueOnce: (value: unknown) => void;
+    };
+    dbHealth.mockResolvedValueOnce(false);
+    const { default: app } = await appPromise;
+    const res = await app.request('/health');
+    const body = (await res.json()) as { success: boolean };
+    expect(res.status).toBe(503);
+    expect(body.success).toBe(false);
+  });
 });

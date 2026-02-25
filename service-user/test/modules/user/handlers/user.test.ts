@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import { Container } from 'typedi';
 import { configLoader } from '../../../../src/config/loader';
 import { CreateUserCommand } from '../../../../src/modules/user/repositories/commands/CreateUserCommand';
+import { DeleteUserCommand } from '../../../../src/modules/user/repositories/commands/DeleteUserCommand';
+import { RestoreUserCommand } from '../../../../src/modules/user/repositories/commands/RestoreUserCommand';
 import { GetUserQuery } from '../../../../src/modules/user/repositories/queries/GetUserQuery';
 import { UserRepository } from '../../../../src/modules/user/repositories/UserRepository';
 
@@ -112,6 +114,159 @@ describe('user handlers', () => {
     const body = (await res.json()) as { success: boolean };
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
+
+    Container.get = originalGet;
+  });
+
+  it('returns 404 when admin user id is missing', async () => {
+    const getUserQuery = {
+      execute: mock(async () => null),
+      executeWithDeleted: mock(async () => null),
+    };
+    const originalGet = Container.get;
+    Container.get = mock((token: unknown) => {
+      if (token === GetUserQuery) return getUserQuery;
+      return undefined;
+    }) as unknown as typeof Container.get;
+
+    const { default: userRoutes } = await routesPromise;
+    const secret = configLoader.getConfig().auth.jwt.secret;
+    const token = jwt.sign({ sub: 'u1', jti: 's1', email: 'a@b.com', role: 'ADMIN' }, secret);
+    const res = await userRoutes.request('/admin/users/u1', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json()) as { error: { code: string } };
+    expect(res.status).toBe(404);
+    expect(body.error.code).toBe('USER_NOT_FOUND');
+
+    Container.get = originalGet;
+  });
+
+  it('returns user when includeDeleted is true', async () => {
+    const getUserQuery = {
+      execute: mock(async () => null),
+      executeWithDeleted: mock(async () => ({
+        id: 'u1',
+        email: 'a@b.com',
+        username: 'user',
+        name: 'User',
+        role: 'ADMIN',
+      })),
+    };
+    const originalGet = Container.get;
+    Container.get = mock((token: unknown) => {
+      if (token === GetUserQuery) return getUserQuery;
+      return undefined;
+    }) as unknown as typeof Container.get;
+
+    const { default: userRoutes } = await routesPromise;
+    const secret = configLoader.getConfig().auth.jwt.secret;
+    const token = jwt.sign({ sub: 'u1', jti: 's1', email: 'a@b.com', role: 'ADMIN' }, secret);
+    const res = await userRoutes.request('/admin/users/u1?includeDeleted=true', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(200);
+
+    Container.get = originalGet;
+  });
+
+  it('returns 404 when deleting missing user', async () => {
+    const deleteUserCommand = {
+      execute: mock(async () => {
+        throw new Error('User not found');
+      }),
+    };
+    const originalGet = Container.get;
+    Container.get = mock((token: unknown) => {
+      if (token === DeleteUserCommand) return deleteUserCommand;
+      return undefined;
+    }) as unknown as typeof Container.get;
+
+    const { default: userRoutes } = await routesPromise;
+    const secret = configLoader.getConfig().auth.jwt.secret;
+    const token = jwt.sign({ sub: 'u1', jti: 's1', email: 'a@b.com', role: 'ADMIN' }, secret);
+    const res = await userRoutes.request('/admin/users/u2', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json()) as { error: { code: string } };
+    expect(res.status).toBe(404);
+    expect(body.error.code).toBe('USER_NOT_FOUND');
+
+    Container.get = originalGet;
+  });
+
+  it('returns 403 when deleting self', async () => {
+    const deleteUserCommand = {
+      execute: mock(async () => {
+        throw new Error('Cannot delete yourself');
+      }),
+    };
+    const originalGet = Container.get;
+    Container.get = mock((token: unknown) => {
+      if (token === DeleteUserCommand) return deleteUserCommand;
+      return undefined;
+    }) as unknown as typeof Container.get;
+
+    const { default: userRoutes } = await routesPromise;
+    const secret = configLoader.getConfig().auth.jwt.secret;
+    const token = jwt.sign({ sub: 'u1', jti: 's1', email: 'a@b.com', role: 'ADMIN' }, secret);
+    const res = await userRoutes.request('/admin/users/u1', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json()) as { error: { code: string } };
+    expect(res.status).toBe(403);
+    expect(body.error.code).toBe('USER_DELETE_FORBIDDEN');
+
+    Container.get = originalGet;
+  });
+
+  it('returns 404 when restoring missing user', async () => {
+    const restoreUserCommand = {
+      execute: mock(async () => {
+        throw new Error('User not found');
+      }),
+    };
+    const originalGet = Container.get;
+    Container.get = mock((token: unknown) => {
+      if (token === RestoreUserCommand) return restoreUserCommand;
+      return undefined;
+    }) as unknown as typeof Container.get;
+
+    const { default: userRoutes } = await routesPromise;
+    const secret = configLoader.getConfig().auth.jwt.secret;
+    const token = jwt.sign({ sub: 'u1', jti: 's1', email: 'a@b.com', role: 'ADMIN' }, secret);
+    const res = await userRoutes.request('/admin/users/u2/restore', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json()) as { error: { code: string } };
+    expect(res.status).toBe(404);
+    expect(body.error.code).toBe('USER_NOT_FOUND');
+
+    Container.get = originalGet;
+  });
+
+  it('returns 404 when current user is not found', async () => {
+    const getUserQuery = {
+      execute: mock(async () => null),
+    };
+    const originalGet = Container.get;
+    Container.get = mock((token: unknown) => {
+      if (token === GetUserQuery) return getUserQuery;
+      return undefined;
+    }) as unknown as typeof Container.get;
+
+    const { default: userRoutes } = await routesPromise;
+    const secret = configLoader.getConfig().auth.jwt.secret;
+    const token = jwt.sign({ sub: 'u1', jti: 's1', email: 'a@b.com', role: 'ADMIN' }, secret);
+    const res = await userRoutes.request('/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json()) as { error: { code: string } };
+    expect(res.status).toBe(404);
+    expect(body.error.code).toBe('USER_NOT_FOUND');
 
     Container.get = originalGet;
   });

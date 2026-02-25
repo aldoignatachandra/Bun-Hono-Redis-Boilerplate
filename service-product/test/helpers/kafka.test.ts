@@ -14,7 +14,10 @@ const kafkaPromise = import('../../src/helpers/kafka');
 describe('kafka helpers', () => {
   it('creates a producer and connects', async () => {
     const connect = mock(async () => undefined);
-    const on = mock((_event: string, _handler: (...args: unknown[]) => void) => undefined);
+    const on = mock((_event: string, handler: (...args: unknown[]) => void) => {
+      handler({});
+      return undefined;
+    });
     const producer = {
       connect,
       on,
@@ -35,7 +38,10 @@ describe('kafka helpers', () => {
 
   it('creates a consumer and connects', async () => {
     const connect = mock(async () => undefined);
-    const on = mock((_event: string, _handler: (...args: unknown[]) => void) => undefined);
+    const on = mock((_event: string, handler: (...args: unknown[]) => void) => {
+      handler({});
+      return undefined;
+    });
     const consumer = {
       connect,
       on,
@@ -108,6 +114,54 @@ describe('kafka helpers', () => {
 
     expect(listTopics).toHaveBeenCalled();
     expect(createTopics).toHaveBeenCalled();
+
+    createAdminSpy.mockRestore();
+  });
+
+  it('returns when no topics configured', async () => {
+    const kafkaModule = await kafkaPromise;
+    const { configLoader } = await configPromise;
+    const config = configLoader.getConfig();
+    config.kafka.topics = undefined;
+
+    await kafkaModule.initializeKafkaTopics();
+  });
+
+  it('skips topic creation when all topics exist', async () => {
+    const listTopics = mock(async () => ['test.topic'] as string[]);
+    const createTopics = mock(async () => true);
+    const disconnect = mock(async () => undefined);
+
+    const admin = {
+      listTopics,
+      createTopics,
+      disconnect,
+    } as unknown as {
+      listTopics: () => Promise<string[]>;
+      createTopics: () => Promise<boolean>;
+      disconnect: () => Promise<void>;
+    };
+
+    const kafkaModule = await kafkaPromise;
+    const createAdminSpy = spyOn(kafkaModule, 'createAdmin').mockResolvedValue(
+      admin as unknown as Awaited<ReturnType<typeof kafkaModule.createAdmin>>
+    );
+
+    const { configLoader } = await configPromise;
+    const config = configLoader.getConfig();
+    config.kafka.topics = {
+      'test.topic': {
+        partitions: 1,
+        replicationFactor: 1,
+        config: {},
+      },
+    };
+
+    await kafkaModule.initializeKafkaTopics();
+
+    expect(listTopics).toHaveBeenCalled();
+    expect(createTopics).not.toHaveBeenCalled();
+    expect(disconnect).toHaveBeenCalled();
 
     createAdminSpy.mockRestore();
   });
