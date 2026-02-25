@@ -15,7 +15,7 @@ config({ path: '.env' });
  * 3. Running migrations from ./drizzle folder
  * 4. Graceful error handling and logging
  */
-async function runMigrations() {
+export async function runMigrations() {
   const connectionString = process.env.DB_URL;
   if (!connectionString) {
     logger.error('❌ DB_URL not found in environment variables');
@@ -60,4 +60,6 @@ async function runMigrations() {
   }
 }
 
-runMigrations();
+if (import.meta.main) {
+  runMigrations();
+}

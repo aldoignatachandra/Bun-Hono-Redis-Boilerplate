@@ -14,7 +14,7 @@ config({ path: '.env' });
  * 4. Dropping database
  * 5. Graceful error handling and logging
  */
-async function dropDatabase() {
+export async function dropDatabase() {
   const dbUrl = process.env.DB_URL;
   if (!dbUrl) {
     logger.error('❌ DB_URL not found in environment variables');
@@ -76,4 +76,6 @@ async function dropDatabase() {
   }
 }
 
-dropDatabase();
+if (import.meta.main) {
+  dropDatabase();
+}

@@ -13,7 +13,7 @@ config({ path: '.env' });
  * 3. Creating database if missing
  * 4. Graceful error handling and logging
  */
-async function createDatabase() {
+export async function createDatabase() {
   const dbUrl = process.env.DB_URL;
   if (!dbUrl) {
     logger.error('❌ DB_URL not found in environment variables');
@@ -68,4 +68,6 @@ async function createDatabase() {
   }
 }
 
-createDatabase();
+if (import.meta.main) {
+  createDatabase();
+}

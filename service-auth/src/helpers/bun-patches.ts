@@ -87,3 +87,5 @@ process.emitWarning = (warning: string | Error, ...args: any[]) => {
 };
 
 console.log('Applied Bun/KafkaJS compatibility patches');
+
+export {};
