@@ -30,6 +30,23 @@ Container.set({
 const db = drizzleDb;
 Container.set('db', db);
 
+const initializeDatabase = async () => {
+  try {
+    const isHealthy = await checkDatabaseHealth();
+    if (!isHealthy) {
+      console.error('Database connection failed');
+      process.exit(1);
+    }
+    console.log('Database connected successfully');
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  }
+};
+
+// Initialize database on startup
+initializeDatabase();
+
 // Admin/System Routes (Protected by System Basic Auth)
 // Must be defined BEFORE userRoutes because userRoutes captures /admin/*
 app.get('/admin/health', systemAuthMiddleware, async c => {

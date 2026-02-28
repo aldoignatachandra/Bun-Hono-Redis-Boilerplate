@@ -3,7 +3,8 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { configLoader } from './config/loader';
-import { successResponse } from './helpers/api-response';
+import { checkDatabaseHealth } from './db/connection';
+import { errorResponse, successResponse } from './helpers/api-response';
 import { auth } from './middlewares/auth';
 import { basicAuthMiddleware } from './middlewares/basic-auth';
 import { rateLimiter } from './middlewares/rate-limit';
@@ -27,29 +28,52 @@ app.use('*', logger());
 app.get('/docs/openapi.json', c => c.json(getOpenApiSpec()));
 app.get('/docs', swaggerUI({ url: '/docs/openapi.json' }));
 
+// Initialize database connection
+const initializeDatabase = async () => {
+  try {
+    const isHealthy = await checkDatabaseHealth();
+    if (!isHealthy) {
+      console.error('Database connection failed');
+      process.exit(1);
+    }
+    console.log('Database connected successfully');
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  }
+};
+
+// Initialize database on startup
+initializeDatabase();
+
 // Health check endpoint (Public)
-app.get('/health', c => {
-  return successResponse(
-    c,
-    {
-      service: 'auth-service',
-      environment: configLoader.getEnvironment(),
-      timestamp: new Date().toISOString(),
-    },
-    'Service is healthy'
-  );
+app.get('/health', async c => {
+  const dbHealth = await checkDatabaseHealth();
+  const data = {
+    service: 'auth-service',
+    environment: configLoader.getEnvironment(),
+    database: dbHealth ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
+  };
+
+  if (dbHealth) {
+    return successResponse(c, data, 'Service is healthy');
+  } else {
+    return errorResponse(c, 'Service is unhealthy', 'SERVICE_UNHEALTHY', 503, data);
+  }
 });
 
 // Admin/System Routes (Protected by System Basic Auth - Env Vars)
-app.get('/admin/health', systemAuthMiddleware, c => {
+app.get('/admin/health', systemAuthMiddleware, async c => {
+  const dbHealth = await checkDatabaseHealth();
   return successResponse(
     c,
     {
       service: 'auth-service',
       mode: 'admin',
       config: {
-        db: 'connected',
-        kafka: 'connected',
+        db: dbHealth ? 'connected' : 'disconnected',
+        kafka: 'connected', // Assuming Kafka is connected if service is running, or add check
       },
       timestamp: new Date().toISOString(),
     },
