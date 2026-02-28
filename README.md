@@ -1,162 +1,199 @@
 # 🚀 Bun + Hono + Kafka Microservices Boilerplate (CQRS + Event-Driven)
 
-Production-ready microservices starter built on **Bun**, **Hono**, **PostgreSQL**, and **Kafka**. This repo gives you a clean CQRS foundation, strict API docs, rate limits, auth, and event-driven workflows with real service boundaries.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Bun](https://img.shields.io/badge/Bun-v1.1+-000000?logo=bun&logoColor=white)
+![Hono](https://img.shields.io/badge/Hono-v4+-E36002?logo=hono&logoColor=white)
+![Kafka](https://img.shields.io/badge/Apache_Kafka-Event_Driven-231F20?logo=apachekafka&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Relational_DB-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-## 🧭 Quick Links
+A production-ready, high-performance microservices starter kit. Built with **Bun** runtime, **Hono** web framework, **PostgreSQL** (with Drizzle ORM), and **Apache Kafka** for event-driven communication.
 
-- [Auth Service API](docs/api-documentation/service-auth-api.md)
-- [User Service API](docs/api-documentation/service-user-api.md)
-- [Product Service API](docs/api-documentation/service-product-api.md)
-
-## �️ Tech Stack Logos
-
-![Bun](https://techicons.dev/icons/bun?size=64)
-![Hono](https://commons.wikimedia.org/wiki/Special:FilePath/Hono-logo.svg)
-![Apache Kafka](https://www.vectorlogo.zone/logos/apache_kafka/apache_kafka-icon.svg)
-![PostgreSQL](https://www.vectorlogo.zone/logos/postgresql/postgresql-icon.svg)
+This boilerplate implements the **CQRS** (Command Query Responsibility Segregation) pattern, ensuring a clean separation between read and write operations, and uses **Kafka** for asynchronous inter-service communication.
 
 ---
 
-## ✅ What You Get
+## 📚 Table of Contents
 
-- **3 services** with clean boundaries: Auth, User, Product
-- **CQRS** pattern (Commands + Queries + Repositories)
-- **Kafka event streams** with explicit topics
-- **OpenAPI docs** with Swagger UI per service
-- **JWT auth**, **Basic Auth** for system routes
-- **Rate limiting** at the edge
-- **Migrations + seeding** via Drizzle
+- [Features](#-features)
+- [Architecture](#-system-architecture)
+- [Project Structure](#-project-structure)
+- [Prerequisites](#-prerequisites)
+- [Getting Started](#-getting-started)
+  - [1. Clone & Install](#1-clone--install)
+  - [2. Environment Configuration](#2-environment-configuration)
+  - [3. Start Infrastructure](#3-start-infrastructure-kafka--postgres)
+  - [4. Database Setup](#4-database-setup-migrations--seeds)
+  - [5. Run Services](#5-run-services)
+- [API Documentation](#-api-documentation)
+- [Deployment](#-deployment)
+- [Troubleshooting](#-troubleshooting)
 
 ---
 
-## �️ System Architecture
+## ✨ Features
+
+- **Microservices Architecture**: Independent services for Auth, User, and Product domains.
+- **Event-Driven**: Asynchronous communication via Apache Kafka (KRaft mode - No Zookeeper).
+- **CQRS Pattern**: Distinct Command and Query paths for optimized performance and scalability.
+- **High Performance**: Built on Bun (fast JS runtime) and Hono (ultrafast web framework).
+- **Type Safety**: Full TypeScript support with Zod validation.
+- **Modern ORM**: Drizzle ORM for type-safe SQL queries and migrations.
+- **Authentication**: JWT (Stateless) for API access + Stateful Session validation (Redis-style logic in Postgres).
+- **Internal APIs**: Secured System-to-System communication using Basic Auth.
+- **Documentation**: Auto-generated OpenAPI (Swagger) docs for every service.
+
+---
+
+## 🏗 System Architecture
+
+### High-Level Overview
 
 ```mermaid
 graph TB
-  subgraph Client
-    A[Web / Mobile Client]
+  subgraph Client_Layer
+    Client[Web / Mobile Client]
   end
 
-  subgraph Services
-    AUTH[Auth Service :3100]
-    USER[User Service :3101]
-    PRODUCT[Product Service :3102]
+  subgraph API_Gateway_Logic
+    direction TB
+    Auth[🔐 Auth Service :3100]
+    User[👤 User Service :3101]
+    Prod[📦 Product Service :3102]
   end
 
-  subgraph Data
-    PG[(PostgreSQL)]
-    KAFKA[(Kafka Cluster)]
+  subgraph Infrastructure
+    PG[(🐘 PostgreSQL)]
+    Kafka[(🚀 Kafka Cluster)]
   end
 
-  A --> AUTH
-  A --> USER
-  A --> PRODUCT
+  Client -->|HTTP/REST| Auth
+  Client -->|HTTP/REST| User
+  Client -->|HTTP/REST| Prod
 
-  AUTH --> PG
-  USER --> PG
-  PRODUCT --> PG
+  Auth -->|SQL| PG
+  User -->|SQL| PG
+  Prod -->|SQL| PG
 
-  AUTH <--> KAFKA
-  USER <--> KAFKA
-  PRODUCT <--> KAFKA
+  Auth <-->|Pub/Sub| Kafka
+  User <-->|Pub/Sub| Kafka
+  Prod <-->|Pub/Sub| Kafka
 ```
 
-### CQRS Request Flow
+### Event-Driven Flow (CQRS Example)
+
+When a product is created, the write operation happens synchronously, but other services are notified asynchronously via Kafka.
 
 ```mermaid
 sequenceDiagram
-  participant Client
-  participant API as Product Service
-  participant DB as PostgreSQL
-  participant Kafka
+  participant C as Client
+  participant P as Product Service
+  participant D as PostgreSQL
+  participant K as Kafka
+  participant U as User Service
 
-  Client->>API: POST /products
-  API->>DB: Create product (Command)
-  API->>Kafka: Publish products.created
-  API-->>Client: 201 Created
+  Note over C,P: Command Side (Write)
+  C->>P: POST /products (Create Product)
+  P->>D: INSERT into products table
+  P->>K: Publish "products.created" event
+  P-->>C: 201 Created
+
+  Note over K,U: Async Event Processing
+  K->>U: Consume "products.created"
+  U->>U: Update internal stats / Log activity
 ```
 
 ---
 
-## 📦 Services & Ports
+## � Project Structure
 
-| Service | Description                          | Port | OpenAPI |
-| ------- | ------------------------------------ | ---- | ------- |
-| Auth    | Login, logout, session management    | 3100 | `/docs` |
-| User    | Admin user management + internal API | 3101 | `/docs` |
-| Product | Product catalog & variants           | 3102 | `/docs` |
+```bash
+bun-hono-kafkajs-boilerplate/
+├── infra/                  # Infrastructure configurations
+│   └── kafka/
+│       └── docker-compose.yml  # Kafka (KRaft) + UI
+├── docs/                   # Centralized documentation
+│   └── api-documentation/  # Detailed API specs
+├── service-auth/           # 🔐 Authentication Service
+│   ├── src/
+│   │   ├── application/    # Use Cases & Business Logic
+│   │   ├── domain/         # Entities & Domain Models
+│   │   ├── infrastructure/ # DB, Kafka, Repositories
+│   │   └── interface/      # HTTP Handlers (Hono)
+│   └── drizzle/            # Migrations
+├── service-user/           # 👤 User Management Service
+│   └── ... (similar structure)
+├── service-product/        # 📦 Product Catalog Service
+│   └── ... (similar structure)
+├── .gitignore
+├── package.json            # Workspace configuration
+└── README.md
+```
 
 ---
 
-## ✅ Required Infrastructure
+## ✅ Prerequisites
 
-This repo **requires** both:
+Before you begin, ensure you have the following installed:
 
-1. **PostgreSQL** (shared DB with per-service schemas)
-2. **Kafka** (local 2-node KRaft cluster + UI)
+1.  **Bun** (v1.1 or later)
+    ```bash
+    curl -fsSL https://bun.sh/install | bash
+    ```
+2.  **Docker & Docker Compose** (For running Kafka and PostgreSQL)
+3.  **Git**
 
 ---
 
-## 🚀 Step-by-Step Setup (Local)
+## 🚀 Getting Started
 
-### 1. Clone the Repo
+Follow these steps strictly to get the boilerplate running locally.
+
+### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/bun-hono-kafkajs-boilerplate.git
-cd bun-hono-kafkajs-boilerplate
+git clone https://github.com/aldoignatachandra/Bun-Hono-KafkaJS-Boilerplate.git
+cd Bun-Hono-KafkaJS-Boilerplate
+
+# Install dependencies for all services (Workspace)
+bun install
 ```
 
-### 2. Install Dependencies
+### 2. Environment Configuration
+
+You need to configure environment variables for **each** service. We provide `.env.example` files.
 
 ```bash
-cd service-auth && bun install && cd ..
-cd service-user && bun install && cd ..
-cd service-product && bun install && cd ..
-```
-
-### 3. Configure Environment Variables
-
-Copy `.env.example` into **each** service:
-
-```bash
+# Copy env files
 cp service-auth/.env.example service-auth/.env
 cp service-user/.env.example service-user/.env
 cp service-product/.env.example service-product/.env
 ```
 
-Required variables per service:
+**Critical Variables Explained:**
 
-| Key               | Description            | Example                                                                     |
-| ----------------- | ---------------------- | --------------------------------------------------------------------------- |
-| `PORT`            | Service port           | `3100`, `3101`, `3102`                                                      |
-| `DB_URL`          | PostgreSQL connection  | `postgresql://postgres:postgres@localhost:5432/cqrs_demo_dev?schema=public` |
-| `JWT_SECRET`      | JWT signing secret     | `your-secret-key`                                                           |
-| `KAFKA_BROKERS`   | Kafka brokers          | `localhost:19092,localhost:29092`                                           |
-| `KAFKA_CLIENT_ID` | Kafka client id        | `service-auth`, `service-user`, `service-product`                           |
-| `SYSTEM_USER`     | System Basic Auth user | `admin`                                                                     |
-| `SYSTEM_PASS`     | System Basic Auth pass | `admin123`                                                                  |
+| Variable        | Description                                    | Default (Local)                                     |
+| :-------------- | :--------------------------------------------- | :-------------------------------------------------- |
+| `DB_URL`        | Connection string for PostgreSQL               | `postgresql://postgres:postgres@localhost:5432/...` |
+| `KAFKA_BROKERS` | Comma-separated list of Kafka brokers          | `localhost:19092,localhost:29092`                   |
+| `JWT_SECRET`    | Secret key for signing access tokens           | Change this in production!                          |
+| `SYSTEM_USER`   | Username for internal service-to-service calls | `admin`                                             |
+| `SYSTEM_PASS`   | Password for internal service-to-service calls | `admin123`                                          |
 
-### 4. Start Kafka (Required)
+### 3. Start Infrastructure (Kafka & Postgres)
+
+We use Docker to run the required infrastructure.
+
+**Start Kafka Cluster:**
 
 ```bash
 bun run kafka:up
 ```
 
-Kafka cluster:
+_Wait about 30 seconds for the Kafka cluster to elect a controller._
 
-- Broker 1: `localhost:19092`
-- Broker 2: `localhost:29092`
-- Kafka UI: `http://localhost:8080`
-
-Stop Kafka:
-
-```bash
-bun run kafka:down
-```
-
-### 5. Start PostgreSQL (Required)
-
-If you don’t already have Postgres running:
+**Start PostgreSQL:**
+(If you don't have a local Postgres instance)
 
 ```bash
 docker run --name cqrs-postgres \
@@ -164,162 +201,129 @@ docker run --name cqrs-postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=cqrs_demo_dev \
   -p 5432:5432 \
-  -d postgres:15
+  -d postgres:15-alpine
 ```
 
-### 6. Run Migrations
+### 4. Database Setup (Migrations & Seeds)
+
+Initialize the database schema for all services.
 
 ```bash
+# Run migrations for each service
 cd service-auth && bun run db:setup && cd ..
 cd service-user && bun run db:setup && cd ..
 cd service-product && bun run db:setup && cd ..
 ```
 
-### 7. Seed Data (Order Matters)
+**Seeding Data (Order is Important!):**
 
-1. Seed **User Service** (creates admin + user accounts):
+1.  **Seed Users**: Creates Admin and Default User.
 
-```bash
-cd service-user && bun run db:seed
-```
+    ```bash
+    cd service-user && bun run db:seed
+    ```
 
-Default credentials created:
+    _Credentials created:_
+    - Admin: `admin@example.com` / `Admin123!`
+    - User: `user@example.com` / `User123!`
 
-- `admin@example.com` / `Admin123!`
-- `user@example.com` / `User123!`
+2.  **Start User Service**: Required because Product seeding fetches user IDs via API.
 
-2. Start User Service (required for product seeding):
+    ```bash
+    # Open a new terminal
+    cd service-user && bun run dev
+    ```
 
-```bash
-cd service-user && bun run dev
-```
+3.  **Seed Products**: Fetches the oldest user to set as the "owner" of products.
+    ```bash
+    cd service-product && bun run db:seed
+    ```
 
-3. Seed **Product Service** (requires User Service):
+### 5. Run Services
 
-```bash
-cd service-product && bun run db:seed
-```
+You can run all services simultaneously using a workspace script (if configured) or in separate terminals.
 
-### 8. Run All Services
-
-From repo root:
-
-```bash
-bun run dev
-```
-
-Or run individually:
+**Terminal 1 (Auth):**
 
 ```bash
 cd service-auth && bun run dev
+```
+
+**Terminal 2 (User):**
+
+```bash
 cd service-user && bun run dev
+```
+
+**Terminal 3 (Product):**
+
+```bash
 cd service-product && bun run dev
 ```
 
-### 9. Verify Everything
+---
 
-```bash
-curl http://localhost:3100/health
-curl http://localhost:3101/health
-curl http://localhost:3102/health
+## 📖 API Documentation
+
+Each service exposes an interactive Swagger UI.
+
+| Service     | Base URL                | Swagger UI                          | Key Features                        |
+| :---------- | :---------------------- | :---------------------------------- | :---------------------------------- |
+| **Auth**    | `http://localhost:3100` | [/docs](http://localhost:3100/docs) | Login, Register, Session Management |
+| **User**    | `http://localhost:3101` | [/docs](http://localhost:3101/docs) | CRUD Users, Internal User Lookup    |
+| **Product** | `http://localhost:3102` | [/docs](http://localhost:3102/docs) | CRUD Products, Variant Management   |
+
+**Detailed Markdown Docs:**
+
+- [Auth Service API Docs](docs/api-documentation/service-auth-api.md)
+- [User Service API Docs](docs/api-documentation/service-user-api.md)
+- [Product Service API Docs](docs/api-documentation/service-product-api.md)
+
+---
+
+## � Deployment
+
+To deploy this microservices architecture, you should build Docker images for each service.
+
+**Example `Dockerfile` for a service:**
+
+```dockerfile
+FROM oven/bun:1.1 as base
+WORKDIR /app
+
+# Install dependencies
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
+
+# Copy source
+COPY . .
+
+# Run
+EXPOSE 3000
+CMD ["bun", "run", "src/index.ts"]
 ```
 
-Swagger UI:
+**Recommended Production Setup:**
 
-- Auth: `http://localhost:3100/docs`
-- User: `http://localhost:3101/docs`
-- Product: `http://localhost:3102/docs`
-
----
-
-## 🧪 Development Commands
-
-From repo root:
-
-```bash
-bun run dev
-bun run build
-bun run test
-bun run lint
-```
-
-Per service (example for user service):
-
-```bash
-cd service-user
-bun run dev
-bun run test
-bun run lint
-bun run db:generate
-bun run db:migrate
-```
+- **Reverse Proxy**: Nginx or Traefik in front of the services.
+- **Managed Database**: AWS RDS or similar for PostgreSQL.
+- **Managed Kafka**: Confluent Cloud or Amazon MSK.
+- **Orchestration**: Kubernetes (K8s) or Docker Swarm.
 
 ---
 
-## 📡 Kafka Topics (Current)
+## 🔧 Troubleshooting
 
-| Topic               | Event Types                 | Source  |
-| ------------------- | --------------------------- | ------- |
-| `auth.events`       | `auth.login`, `auth.logout` | Auth    |
-| `users.created`     | `user.created`              | User    |
-| `users.restored`    | `user.restored`             | User    |
-| `users.deleted`     | `user.deleted`              | User    |
-| `products.created`  | `product.created`           | Product |
-| `products.updated`  | `product.updated`           | Product |
-| `products.deleted`  | `product.deleted`           | Product |
-| `products.restored` | `product.restored`          | Product |
+| Issue                               | Possible Cause                               | Solution                                                                |
+| :---------------------------------- | :------------------------------------------- | :---------------------------------------------------------------------- |
+| **Connection Refused (Kafka)**      | Kafka container not running or ports blocked | Run `bun run kafka:up` and check `docker ps`.                           |
+| **Relation does not exist**         | Migrations not run                           | Run `bun run db:setup` in the affected service.                         |
+| **401 Unauthorized (Internal API)** | System credentials mismatch                  | Ensure `SYSTEM_USER` and `SYSTEM_PASS` match in all `.env` files.       |
+| **Seed Failed (Product)**           | User Service not reachable                   | Ensure User Service is running (`bun run dev`) before seeding products. |
+| **Bun install fails**               | Network or Lockfile issue                    | Delete `bun.lockb` and `node_modules`, then run `bun install` again.    |
 
 ---
 
-## 🔐 Authentication Summary
+## 📜 License
 
-| Type       | Used By                      | Header                      |
-| ---------- | ---------------------------- | --------------------------- |
-| Basic Auth | `/auth/login`, system routes | `Authorization: Basic ...`  |
-| Bearer JWT | Protected endpoints          | `Authorization: Bearer ...` |
-
-JWT expiry is **1 day** by default.
-
----
-
-## 🧩 Service-to-Service Rules
-
-- Product seed uses **User Service internal API**:
-  - `/api/internal/users/oldest`
-- Requires `SYSTEM_USER` + `SYSTEM_PASS`
-- User Service must be running before product seeding
-
----
-
-## � Troubleshooting
-
-| Symptom                 | Cause                    | Fix                              |
-| ----------------------- | ------------------------ | -------------------------------- |
-| Kafka connection errors | Kafka not running        | `bun run kafka:up`               |
-| Product seed fails      | User service not running | Start `service-user` first       |
-| 401 on internal API     | Wrong system auth        | Update `SYSTEM_USER/SYSTEM_PASS` |
-| DB errors               | Postgres not running     | Start Postgres container         |
-
----
-
-## 🤝 Contributing
-
-Commit message rules are enforced via Husky + Commitlint:
-
-```bash
-git commit -m "add: new feature"
-git commit -m "fix: login issue"
-git commit -m "update: docs"
-```
-
----
-
-## 📚 API Documentation
-
-All service docs live in [docs/api-documentation](docs/api-documentation).
-
-OpenAPI JSON for each service:
-
-- Auth: `/docs/openapi.json`
-- User: `/docs/openapi.json`
-- Product: `/docs/openapi.json`
+This project is licensed under the MIT License.
