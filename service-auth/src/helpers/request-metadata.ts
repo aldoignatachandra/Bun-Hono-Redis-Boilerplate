@@ -52,7 +52,8 @@ export const getRequestMetadata = (c: Context): RequestMetadata => {
   // 2. Parse User Agent & Device Type
   const userAgentString = c.req.header('user-agent') || 'unknown';
   const parser = new UAParser(userAgentString);
-  const deviceType = parser.getDevice().type || 'desktop'; // UAParser returns undefined for desktop usually
+  const result = parser.getResult();
+  const deviceType = result.device.type || 'desktop'; // UAParser returns undefined for desktop usually
 
   return {
     ipAddress,

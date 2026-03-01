@@ -2,7 +2,8 @@ import { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { errorResponse } from '../helpers/api-response';
 import { getRequestMetadata } from '../helpers/request-metadata';
-import { checkAndConsume } from '../helpers/rate-limiter';
+import { getRedisClient } from '../helpers/redis';
+import { RedisRateLimiter } from '../helpers/redis-rate-limiter';
 
 export const rateLimiter = (maxRequests: number, windowSeconds: number) =>
   createMiddleware(async (c: Context, next) => {
@@ -11,10 +12,19 @@ export const rateLimiter = (maxRequests: number, windowSeconds: number) =>
     const method = c.req.method;
     const path = c.req.path;
     const key = `${method}:${path}:${identity}`;
-    const result = checkAndConsume(key, maxRequests, windowSeconds * 1000);
+    let result: Awaited<ReturnType<RedisRateLimiter['check']>> | null = null;
+    try {
+      const redis = getRedisClient();
+      const limiter = new RedisRateLimiter(redis);
+      result = await limiter.check(key, maxRequests, windowSeconds);
+    } catch (_error) {
+      await next();
+      return;
+    }
 
     c.header('X-RateLimit-Limit', String(result.limit));
     c.header('X-RateLimit-Remaining', String(result.remaining));
+    c.header('X-RateLimit-Reset', String(result.retryAfter));
 
     if (!result.allowed) {
       c.header('Retry-After', String(result.retryAfter));

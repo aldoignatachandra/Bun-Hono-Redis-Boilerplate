@@ -34,7 +34,7 @@ type Consumer = {
 
 let redisClient: Redis | null = null;
 
-const getRedisClient = () => {
+export const getRedisClient = () => {
   if (!redisClient) {
     const config = configLoader.getConfig().redis;
     redisClient = new Redis({
@@ -80,8 +80,10 @@ export async function createConsumer(groupId: string): Promise<Consumer> {
       startId = fromBeginning ? '0-0' : '$';
       for (const topic of topics) {
         try {
+          // MKSTREAM option creates the stream if it doesn't exist
           await client.xgroup('CREATE', topic, groupId, startId, 'MKSTREAM');
         } catch (error: any) {
+          // Ignore BUSYGROUP error (group already exists)
           if (!error?.message?.includes('BUSYGROUP')) {
             throw error;
           }

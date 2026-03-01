@@ -17,11 +17,11 @@
     }
   },
   "redis": {
-    "host": "localhost",
-    "port": 6379,
-    "password": "",
-    "db": 0,
-    "keyPrefix": "auth:",
+    "host": "${REDIS_HOST}",
+    "port": "${REDIS_PORT}",
+    "password": "${REDIS_PASSWORD}",
+    "db": "${REDIS_DB}",
+    "keyPrefix": "",
     "streams": {
       "maxLen": 10000,
       "blockMs": 5000

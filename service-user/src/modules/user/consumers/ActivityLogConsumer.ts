@@ -86,6 +86,7 @@ export class ActivityLogConsumer {
         },
       });
     } catch (error) {
+      console.log('Failed to create ActivityLogConsumer:', error);
       logger.error('Failed to start ActivityLogConsumer:', error);
     }
   }

@@ -34,7 +34,7 @@ type Consumer = {
 
 let redisClient: Redis | null = null;
 
-const getRedisClient = () => {
+export const getRedisClient = () => {
   if (!redisClient) {
     const config = configLoader.getConfig().redis;
     redisClient = new Redis({

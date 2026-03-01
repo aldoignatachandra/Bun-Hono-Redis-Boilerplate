@@ -1,9 +1,16 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import type { Context } from 'hono';
-import { resetRateLimiterStore } from '../../src/helpers/rate-limiter';
-import { rateLimiter } from '../../src/middlewares/rate-limit';
+let callCount = 0;
+const evalMock = mock(async () => {
+  callCount += 1;
+  return callCount === 1 ? [1, 0, 1] : [0, 5, 2];
+});
 
-process.env.NODE_ENV = 'dev';
+mock.module('../../src/helpers/redis', () => ({
+  getRedisClient: () => ({ eval: evalMock }),
+}));
+
+const modulePromise = import('../../src/middlewares/rate-limit');
 
 type JsonFn = (data: unknown, status?: number) => unknown;
 
@@ -29,10 +36,11 @@ const createContext = (
 
 describe('rate limiter middleware', () => {
   beforeEach(() => {
-    resetRateLimiterStore();
+    callCount = 0;
   });
 
   it('uses IP when user is not provided', async () => {
+    const { rateLimiter } = await modulePromise;
     const c = createContext('/auth/login', 'POST', {});
     const next = mock(async () => undefined);
     const mw = rateLimiter(1, 1);
@@ -44,6 +52,7 @@ describe('rate limiter middleware', () => {
   });
 
   it('uses user id when available', async () => {
+    const { rateLimiter } = await modulePromise;
     const c = createContext('/auth/logout', 'POST', { user: { sub: 'u1' } });
     const next = mock(async () => undefined);
     const mw = rateLimiter(1, 1);
