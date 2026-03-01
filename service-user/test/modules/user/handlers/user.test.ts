@@ -26,6 +26,17 @@ mock.module('../../../../src/db/connection', () => ({
   },
 }));
 
+mock.module('../../../../src/helpers/redis', () => ({
+  getRedisClient: () => ({
+    status: 'mock',
+    xadd: mock(async () => '1-0'),
+    xgroup: mock(async () => 'OK'),
+    xreadgroup: mock(async () => null),
+    xack: mock(async () => 1),
+    quit: mock(async () => 'OK'),
+  }),
+}));
+
 const routesPromise = import('../../../../src/modules/user/handlers/user');
 
 describe('user handlers', () => {

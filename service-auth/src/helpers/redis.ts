@@ -34,17 +34,28 @@ type Consumer = {
 
 let redisClient: Redis | null = null;
 
+const createNewRedisClient = () => {
+  const config = configLoader.getConfig().redis;
+  // Force 127.0.0.1 if localhost to avoid IPv6 issues
+  const host = config.host === 'localhost' ? '127.0.0.1' : config.host;
+
+  return new Redis({
+    host,
+    port: config.port,
+    password: config.password || undefined,
+    db: config.db,
+    keyPrefix: config.keyPrefix,
+    retryStrategy: times => Math.min(times * 50, 2000),
+    family: 4, // Force IPv4
+    commandTimeout: 10000, // Fail fast(er) if Redis is unresponsive
+    keepAlive: 1000, // Keep connection alive (1s)
+    noDelay: true, // Disable Nagle's algorithm
+  });
+};
+
 export const getRedisClient = () => {
   if (!redisClient) {
-    const config = configLoader.getConfig().redis;
-    redisClient = new Redis({
-      host: config.host,
-      port: config.port,
-      password: config.password || undefined,
-      db: config.db,
-      keyPrefix: config.keyPrefix,
-      retryStrategy: times => Math.min(times * 50, 2000),
-    });
+    redisClient = createNewRedisClient();
   }
   return redisClient;
 };
@@ -67,7 +78,7 @@ export async function createProducer(): Promise<Producer> {
 }
 
 export async function createConsumer(groupId: string): Promise<Consumer> {
-  const client = getRedisClient();
+  const client = createNewRedisClient();
   const blockMs = configLoader.getConfig().redis.streams.blockMs;
   const consumerName = `consumer-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
   let topics: string[] = [];
@@ -91,43 +102,49 @@ export async function createConsumer(groupId: string): Promise<Consumer> {
     run: async ({ eachMessage }) => {
       running = true;
       while (running) {
-        const ids = topics.map(() => '>');
-        const response = (await client.xreadgroup(
-          'GROUP',
-          groupId,
-          consumerName,
-          'BLOCK',
-          blockMs,
-          'STREAMS',
-          ...topics,
-          ...ids
-        )) as Array<[string, Array<[string, string[]]>]> | null;
-        if (!response) {
-          continue;
-        }
-        for (const [stream, messages] of response) {
-          for (const [id, fields] of messages) {
-            const index = fields.indexOf('payload');
-            if (index === -1) {
-              await client.xack(stream, groupId, id);
-              continue;
+        try {
+          const ids = topics.map(() => '>');
+          const response = (await client.xreadgroup(
+            'GROUP',
+            groupId,
+            consumerName,
+            'BLOCK',
+            blockMs,
+            'STREAMS',
+            ...topics,
+            ...ids
+          )) as [string, [string, string[]][]][];
+
+          if (response) {
+            for (const [topic, messages] of response) {
+              for (const [id, fields] of messages) {
+                const index = fields.indexOf('payload');
+                if (index === -1) {
+                  await client.xack(topic, groupId, id);
+                  continue;
+                }
+                const payload = fields[index + 1];
+                await eachMessage({
+                  topic,
+                  partition: 0,
+                  message: { value: Buffer.from(payload), offset: id },
+                });
+                await client.xack(topic, groupId, id);
+              }
             }
-            const payload = fields[index + 1];
-            await eachMessage({
-              topic: stream,
-              partition: 0,
-              message: {
-                value: Buffer.from(payload),
-                offset: id,
-              },
-            });
-            await client.xack(stream, groupId, id);
+          }
+        } catch (error) {
+          if (running) {
+            console.error('Error in consumer loop:', error);
+            // Wait a bit before retrying to avoid tight loop on error
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
       }
     },
     disconnect: async () => {
       running = false;
+      await client.quit();
     },
   };
 }

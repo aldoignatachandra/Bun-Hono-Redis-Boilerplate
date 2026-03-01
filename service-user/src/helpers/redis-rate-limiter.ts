@@ -8,9 +8,9 @@ type RateLimitResult = {
 };
 
 const LUA_SCRIPT = `
-local key = keys[1]
-local limit = tonumber(argv[1])
-local window = tonumber(argv[2])
+local key = KEYS[1]
+local limit = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
 local current = redis.call("INCR", key)
 if current == 1 then
   redis.call("EXPIRE", key, window)

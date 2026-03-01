@@ -36,7 +36,7 @@ export class ActivityLogConsumer {
       );
 
       await this.consumer.run({
-        eachMessage: async ({ topic, partition, message }) => {
+        eachMessage: async ({ topic, partition: _partition, message }) => {
           try {
             const value = message.value?.toString();
             if (!value) return;

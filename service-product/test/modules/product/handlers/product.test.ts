@@ -16,6 +16,27 @@ process.env.PORT = process.env.PORT ?? '3200';
 process.env.SYSTEM_USER = process.env.SYSTEM_USER ?? 'system';
 process.env.SYSTEM_PASS = process.env.SYSTEM_PASS ?? 'system';
 
+mock.module('../../../../src/db/connection', () => ({
+  drizzleDb: {
+    query: {
+      userSessions: {
+        findFirst: mock(async () => ({ id: 's1' })),
+      },
+    },
+  },
+}));
+
+mock.module('../../../../src/helpers/redis', () => ({
+  getRedisClient: () => ({
+    status: 'mock',
+    xadd: mock(async () => '1-0'),
+    xgroup: mock(async () => 'OK'),
+    xreadgroup: mock(async () => null),
+    xack: mock(async () => 1),
+    quit: mock(async () => 'OK'),
+  }),
+}));
+
 const routesPromise = import('../../../../src/modules/product/handlers/product');
 
 describe('product handlers', () => {

@@ -162,11 +162,21 @@ class ConfigLoader {
   private substituteEnvVars(config: any): any {
     if (typeof config === 'string') {
       // Replace ${VAR_NAME} with process.env.VAR_NAME
+      // Support default values with ${VAR_NAME:-default}
       if (config.startsWith('${') && config.endsWith('}')) {
-        const varName = config.slice(2, -1);
-        // Special handling for some vars if they are empty strings in env
+        const content = config.slice(2, -1);
+        const separatorIndex = content.indexOf(':-');
+
+        let varName = content;
+        let defaultValue: string | undefined;
+
+        if (separatorIndex !== -1) {
+          varName = content.substring(0, separatorIndex);
+          defaultValue = content.substring(separatorIndex + 2);
+        }
+
         const val = process.env[varName];
-        return val !== undefined ? val : config;
+        return val !== undefined ? val : (defaultValue ?? config);
       }
       return config;
     }
@@ -197,6 +207,9 @@ class ConfigLoader {
 
       // 3. Merge configs
       config = this.deepMerge(baseConfig, envConfig);
+
+      // 4. Substitute env vars
+      config = this.substituteEnvVars(config);
     } else {
       // Fallback defaults if config dir not found (legacy behavior)
       config = {

@@ -1,9 +1,9 @@
 import { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { errorResponse } from '../helpers/api-response';
-import { getRequestMetadata } from '../helpers/request-metadata';
 import { getRedisClient } from '../helpers/redis';
 import { RedisRateLimiter } from '../helpers/redis-rate-limiter';
+import { getRequestMetadata } from '../helpers/request-metadata';
 
 export const rateLimiter = (maxRequests: number, windowSeconds: number) =>
   createMiddleware(async (c: Context, next) => {
@@ -15,9 +15,24 @@ export const rateLimiter = (maxRequests: number, windowSeconds: number) =>
     let result: Awaited<ReturnType<RedisRateLimiter['check']>> | null = null;
     try {
       const redis = getRedisClient();
+
+      // If Redis is not ready (connecting/reconnecting), we fail open to avoid latency.
+      if (redis.status !== 'ready') {
+        console.warn(`[RateLimit] Redis not ready (status: ${redis.status}). Failing open.`);
+        await next();
+        return;
+      }
+
       const limiter = new RedisRateLimiter(redis);
+      const start = Date.now();
       result = await limiter.check(key, maxRequests, windowSeconds);
-    } catch (_error) {
+      const duration = Date.now() - start;
+
+      if (duration > 100) {
+        console.warn(`[RateLimit] Slow check for ${key}: ${duration}ms`);
+      }
+    } catch (error) {
+      console.error('[RateLimit] Error checking rate limit:', error);
       await next();
       return;
     }

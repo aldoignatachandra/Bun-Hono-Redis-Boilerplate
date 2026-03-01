@@ -44,15 +44,7 @@ const client = postgres(connectionString, connectionConfig);
 
 export const drizzleDb = drizzle(client, {
   schema,
-  logger:
-    process.env.NODE_ENV === 'dev'
-      ? {
-          logQuery: (query: string, params: unknown[]) => {
-            console.log('Query:', query);
-            console.log('Params:', params);
-          },
-        }
-      : false,
+  logger: false,
 });
 
 export { client };

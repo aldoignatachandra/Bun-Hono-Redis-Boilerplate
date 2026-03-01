@@ -6,8 +6,22 @@ const evalMock = mock(async () => {
   return callCount === 1 ? [1, 0, 1] : [0, 5, 2];
 });
 
+const xaddMock = mock(async () => '1-0');
+const xgroupMock = mock(async () => 'OK');
+const xreadgroupMock = mock(async () => null);
+const xackMock = mock(async () => 1);
+const quitMock = mock(async () => 'OK');
+
 mock.module('../../src/helpers/redis', () => ({
-  getRedisClient: () => ({ eval: evalMock }),
+  getRedisClient: () => ({
+    eval: evalMock,
+    status: 'ready',
+    xadd: xaddMock,
+    xgroup: xgroupMock,
+    xreadgroup: xreadgroupMock,
+    xack: xackMock,
+    quit: quitMock,
+  }),
 }));
 
 const modulePromise = import('../../src/middlewares/rate-limit');

@@ -1,11 +1,12 @@
 import { swaggerUI } from '@hono/swagger-ui';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
+import { logger as honoLogger } from 'hono/logger';
 import { Container } from 'typedi';
 import { configLoader } from './config/loader';
 import { checkDatabaseHealth } from './db/connection';
 import { errorResponse, successResponse } from './helpers/api-response';
+import logger from './helpers/logger';
 import { systemAuthMiddleware } from './middlewares/system-auth';
 import productRoutes from './modules/product/handlers/product';
 import { getOpenApiSpec } from './openapi';
@@ -14,7 +15,7 @@ const app = new Hono();
 
 // Middleware
 app.use('*', cors());
-app.use('*', logger());
+app.use('*', honoLogger());
 
 // OpenAPI documentation
 app.get('/docs/openapi.json', c => c.json(getOpenApiSpec()));
@@ -30,12 +31,12 @@ const initializeDatabase = async () => {
   try {
     const isHealthy = await checkDatabaseHealth();
     if (!isHealthy) {
-      console.error('Database connection failed');
+      logger.error('Database connection failed');
       process.exit(1);
     }
-    console.log('Database connected successfully');
+    logger.info('Database connected successfully');
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    logger.error('Failed to initialize database:', error);
     process.exit(1);
   }
 };

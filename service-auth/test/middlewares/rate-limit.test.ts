@@ -7,7 +7,15 @@ const evalMock = mock(async () => {
 });
 
 mock.module('../../src/helpers/redis', () => ({
-  getRedisClient: () => ({ eval: evalMock }),
+  getRedisClient: () => ({
+    eval: evalMock,
+    status: 'ready',
+    xadd: mock(async () => '1-0'),
+    xgroup: mock(async () => 'OK'),
+    xreadgroup: mock(async () => null),
+    xack: mock(async () => 1),
+    quit: mock(async () => 'OK'),
+  }),
 }));
 
 const modulePromise = import('../../src/middlewares/rate-limit');
