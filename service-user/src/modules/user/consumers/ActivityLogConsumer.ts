@@ -1,13 +1,12 @@
-import { Consumer } from 'kafkajs';
 import { Service } from 'typedi';
 import { drizzleDb } from '../../../db/connection';
-import { createConsumer } from '../../../helpers/kafka';
 import logger from '../../../helpers/logger';
+import { createConsumer } from '../../../helpers/redis';
 import { userActivityLogs } from '../domain/schema';
 
 @Service()
 export class ActivityLogConsumer {
-  private consumer: Consumer | null = null;
+  private consumer: Awaited<ReturnType<typeof createConsumer>> | null = null;
 
   async start() {
     try {

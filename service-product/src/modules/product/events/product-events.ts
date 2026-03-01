@@ -1,5 +1,5 @@
-import { createProducer } from '../../../helpers/kafka';
 import logger from '../../../helpers/logger';
+import { createProducer } from '../../../helpers/redis';
 import { EventMetadata } from '../../../helpers/types';
 
 export interface ProductEvent {
@@ -59,8 +59,7 @@ export async function productCreatedProducer(product: ProductEvent, correlationI
     logger.info('Product created event published', {
       productId: product.id,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
 
     return result;
@@ -118,8 +117,7 @@ export async function productUpdatedProducer(product: ProductEvent, correlationI
     logger.info('Product updated event published', {
       productId: product.id,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
 
     return result;
@@ -184,8 +182,7 @@ export async function productDeletedProducer(
     logger.info('Product deleted event published', {
       productId,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
 
     return result;
@@ -250,8 +247,7 @@ export async function productRestoredProducer(
     logger.info('Product restored event published', {
       productId,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
 
     return result;

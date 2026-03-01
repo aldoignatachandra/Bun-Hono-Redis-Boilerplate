@@ -2,16 +2,13 @@ import 'reflect-metadata';
 import { Container } from 'typedi';
 import app from './src/app';
 import { configLoader } from './src/config/loader';
-import './src/helpers/bun-patches'; // Suppress KafkaJS/Bun warnings
-import { initializeKafkaTopics } from './src/helpers/kafka';
 import logger from './src/helpers/logger';
+import { initializeRedisStreams } from './src/helpers/redis';
 import { ActivityLogConsumer } from './src/modules/user/consumers/ActivityLogConsumer';
 
 const port = configLoader.getConfig().services.userService.port;
 
-// Initialize Kafka topics (if configured)
-// This ensures topics exist before we start consuming/producing
-await initializeKafkaTopics();
+await initializeRedisStreams();
 
 // Start Activity Log Consumer
 const startConsumer = async (retries = 5, delay = 2000) => {

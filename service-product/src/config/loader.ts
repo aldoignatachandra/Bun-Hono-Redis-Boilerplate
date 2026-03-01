@@ -33,43 +33,16 @@ const ConfigSchema = z.object({
       port: z.coerce.number(),
     }),
   }),
-  kafka: z.object({
-    clientId: z.string(),
-    brokers: z.union([
-      z.array(z.string()),
-      z.string().transform(s => s.split(',').map(b => b.trim())),
-    ]),
-    ssl: z.boolean(),
-    sasl: z
-      .object({
-        mechanism: z.string().optional(),
-        username: z.string().optional(),
-        password: z.string().optional(),
-      })
-      .optional(),
-    producer: z.object({
-      batchSize: z.number(),
-      lingerMs: z.number(),
-      compressionType: z.string(),
-      enableIdempotence: z.boolean(),
+  redis: z.object({
+    host: z.string(),
+    port: z.coerce.number(),
+    password: z.string().optional(),
+    db: z.coerce.number(),
+    keyPrefix: z.string(),
+    streams: z.object({
+      maxLen: z.coerce.number(),
+      blockMs: z.coerce.number(),
     }),
-    consumer: z.object({
-      sessionTimeoutMs: z.number(),
-      heartbeatIntervalMs: z.number(),
-      maxPollRecords: z.number(),
-      autoOffsetReset: z.enum(['earliest', 'latest']),
-      enableAutoCommit: z.boolean(),
-    }),
-    // Added topics configuration schema
-    topics: z
-      .record(
-        z.object({
-          partitions: z.number(),
-          replicationFactor: z.number(),
-          config: z.record(z.string()).optional(),
-        })
-      )
-      .optional(),
   }),
   logging: z.object({
     level: z.enum(['debug', 'info', 'warn', 'error']),
@@ -222,27 +195,40 @@ class ConfigLoader {
     } else {
       // Fallback defaults if config dir not found (legacy behavior)
       config = {
-        app: { name: 'bun-hono-kafka-cqrs', version: '1.0.0' },
-        database: { pool: { min: 1, max: 10, idleTimeoutMs: 10000 } },
+        app: { name: 'bun-hono-redis-cqrs', version: '1.0.0' },
+        database: {
+          url: 'postgres://postgres:postgres@localhost:5432/cqrs_demo?schema=public',
+          pool: { min: 2, max: 10, idleTimeoutMs: 30000 },
+        },
         auth: { jwt: { secret: 'default', expiresIn: '1d' } },
-        kafka: {
-          clientId: 'cqrs-demo',
-          producer: {
-            batchSize: 16384,
-            lingerMs: 5,
-            compressionType: 'gzip',
-            enableIdempotence: true,
-          },
-          consumer: {
-            sessionTimeoutMs: 30000,
-            heartbeatIntervalMs: 3000,
-            maxPollRecords: 500,
-            autoOffsetReset: 'earliest',
-            enableAutoCommit: false,
-          },
+        services: {
+          userService: { port: 3101 },
+          productService: { port: 3102 },
+        },
+        redis: {
+          host: 'localhost',
+          port: 6379,
+          db: 0,
+          keyPrefix: 'product:',
+          streams: { maxLen: 10000, blockMs: 5000 },
         },
         logging: { level: 'info', pretty: true },
         metrics: { enabled: false },
+        security: {
+          encryptionEnabled: true,
+          keyRotationInterval: 604800000,
+          auditLogging: true,
+          systemAuth: {
+            username: 'system',
+            password: 'system-password',
+          },
+        },
+        features: {
+          hotReload: false,
+          autoMigrate: false,
+          debugMode: false,
+          mockExternalServices: false,
+        },
       };
     }
 
@@ -274,10 +260,22 @@ class ConfigLoader {
       config.auth.jwt.secret = process.env.JWT_SECRET;
     }
 
-    // Kafka overrides
-    if (process.env.KAFKA_BROKERS) {
-      if (!config.kafka) config.kafka = {};
-      config.kafka.brokers = process.env.KAFKA_BROKERS.split(',').map(b => b.trim());
+    // Redis overrides
+    if (process.env.REDIS_HOST) {
+      if (!config.redis) config.redis = {};
+      config.redis.host = process.env.REDIS_HOST;
+    }
+    if (process.env.REDIS_PORT) {
+      if (!config.redis) config.redis = {};
+      config.redis.port = parseInt(process.env.REDIS_PORT);
+    }
+    if (process.env.REDIS_PASSWORD !== undefined) {
+      if (!config.redis) config.redis = {};
+      config.redis.password = process.env.REDIS_PASSWORD;
+    }
+    if (process.env.REDIS_DB) {
+      if (!config.redis) config.redis = {};
+      config.redis.db = parseInt(process.env.REDIS_DB);
     }
 
     // System Auth overrides

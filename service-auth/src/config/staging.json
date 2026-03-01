@@ -13,78 +13,15 @@
       "port": "${PORT}"
     }
   },
-  "kafka": {
-    "brokers": "${KAFKA_BROKERS}",
-    "clientId": "${KAFKA_CLIENT_ID}",
-    "ssl": false,
-    "sasl": {
-      "mechanism": "",
-      "username": "",
-      "password": ""
-    },
-    "topics": {
-      "users.created": {
-        "partitions": 3,
-        "replicationFactor": 2,
-        "config": {
-          "retention.ms": "604800000",
-          "cleanup.policy": "delete",
-          "compression.type": "gzip"
-        }
-      },
-      "products.created": {
-        "partitions": 6,
-        "replicationFactor": 2,
-        "config": {
-          "retention.ms": "604800000",
-          "cleanup.policy": "delete",
-          "compression.type": "gzip"
-        }
-      },
-      "products.updated": {
-        "partitions": 6,
-        "replicationFactor": 2,
-        "config": {
-          "retention.ms": "604800000",
-          "cleanup.policy": "delete",
-          "compression.type": "gzip"
-        }
-      },
-      "products.deleted": {
-        "partitions": 6,
-        "replicationFactor": 2,
-        "config": {
-          "retention.ms": "604800000",
-          "cleanup.policy": "delete",
-          "compression.type": "gzip"
-        }
-      },
-      "notifications.send": {
-        "partitions": 4,
-        "replicationFactor": 2,
-        "config": {
-          "retention.ms": "86400000",
-          "cleanup.policy": "delete"
-        }
-      },
-      "events.retry": {
-        "partitions": 3,
-        "replicationFactor": 2,
-        "config": {
-          "retention.ms": "604800000",
-          "cleanup.policy": "delete",
-          "message.timestamp.type": "LogAppendTime"
-        }
-      },
-      "events.dlq": {
-        "partitions": 3,
-        "replicationFactor": 2,
-        "config": {
-          "retention.ms": "2592000000",
-          "cleanup.policy": "delete",
-          "message.timestamp.type": "LogAppendTime"
-        }
-      }
+  "redis": {
+    "host": "${REDIS_HOST}",
+    "port": "${REDIS_PORT}",
+    "password": "${REDIS_PASSWORD}",
+    "db": "${REDIS_DB}",
+    "keyPrefix": "auth:",
+    "streams": {
+      "maxLen": 50000,
+      "blockMs": 5000
     }
   },
   "logging": {

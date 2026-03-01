@@ -25,13 +25,13 @@ services:
       DB_URL: postgresql://postgres:postgres@postgres:5432/cqrs_demo_dev
       JWT_SECRET: supersecret-change-me-in-production
       USER_SERVICE_PORT: 3101
-      KAFKA_BROKERS: kafka-1:9092,kafka-2:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "3101:3101"
     depends_on:
       - postgres
-      - kafka-1
-      - kafka-2
+      - redis
     networks:
       - app-network
 
@@ -45,13 +45,13 @@ services:
       NODE_ENV: dev
       DB_URL: postgresql://postgres:postgres@postgres:5432/cqrs_demo_dev
       PRODUCT_SERVICE_PORT: 3102
-      KAFKA_BROKERS: kafka-1:9092,kafka-2:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "3102:3102"
     depends_on:
       - postgres
-      - kafka-1
-      - kafka-2
+      - redis
     networks:
       - app-network
 
@@ -66,28 +66,27 @@ services:
       JWT_SECRET: supersecret-change-me-in-production
       AUTH_SERVICE_PORT: 3100
       PORT: 3100
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "3100:3100"
     networks:
       - app-network
 
-  # Kafka Brokers
-  kafka-1:
-    extends:
-      file: ../../kafka/docker-compose.yml
-    service: kafka-1
-    networks:
-      - app-network
-
-  kafka-2:
-    extends:
-      file: ../../kafka/docker-compose.yml
-    service: kafka-2
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_dev_data:/data
     networks:
       - app-network
 
 volumes:
   postgres_dev_data:
+  redis_dev_data:
 
 networks:
   app-network:

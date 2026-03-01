@@ -91,7 +91,7 @@ export const getOpenApiSpec = (): OpenApiSpec => ({
             type: 'object',
             properties: {
               db: { type: 'string' },
-              kafka: { type: 'string' },
+              redis: { type: 'string' },
             },
           },
           timestamp: { type: 'string', format: 'date-time' },

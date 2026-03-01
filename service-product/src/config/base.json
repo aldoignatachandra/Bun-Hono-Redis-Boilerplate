@@ -16,21 +16,15 @@
       "expiresIn": "1d"
     }
   },
-  "kafka": {
-    "clientId": "cqrs-demo",
-    "producer": {
-      "batchSize": 16384,
-      "lingerMs": 5,
-      "compressionType": "gzip",
-      "maxInFlightRequests": 5,
-      "enableIdempotence": true
-    },
-    "consumer": {
-      "sessionTimeoutMs": 30000,
-      "heartbeatIntervalMs": 3000,
-      "maxPollRecords": 500,
-      "autoOffsetReset": "earliest",
-      "enableAutoCommit": false
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": "",
+    "db": 0,
+    "keyPrefix": "product:",
+    "streams": {
+      "maxLen": 10000,
+      "blockMs": 5000
     }
   },
   "logging": {

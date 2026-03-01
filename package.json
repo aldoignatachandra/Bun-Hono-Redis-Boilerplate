@@ -1,7 +1,7 @@
 {
-  "name": "bun-hono-kafka-cqrs",
+  "name": "bun-hono-redis-cqrs",
   "version": "2.0.0",
-  "description": "Production-grade microservices boilerplate with Bun, Hono, PostgreSQL, and Kafka",
+  "description": "Production-grade microservices boilerplate with Bun, Hono, PostgreSQL, and Redis",
   "type": "module",
   "private": true,
   "scripts": {
@@ -21,9 +21,9 @@
     "lint:service-auth": "cd service-auth && bun run lint",
     "lint:service-user": "cd service-user && bun run lint",
     "lint:service-product": "cd service-product && bun run lint",
-    "kafka:up": "docker compose -f infra/kafka/docker-compose.yml up -d",
-    "kafka:down": "docker compose -f infra/kafka/docker-compose.yml down",
-    "kafka:logs": "docker compose -f infra/kafka/docker-compose.yml logs -f",
+    "redis:up": "docker compose -f infra/redis/docker-compose.yml up -d",
+    "redis:down": "docker compose -f infra/redis/docker-compose.yml down",
+    "redis:logs": "docker compose -f infra/redis/docker-compose.yml logs -f",
     "prepare": "husky"
   },
   "engines": {

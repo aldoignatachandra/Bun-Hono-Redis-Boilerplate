@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import app from './src/app';
 import { configLoader } from './src/config/loader';
-import './src/helpers/bun-patches'; // Suppress KafkaJS/Bun warnings
 import logger from './src/helpers/logger';
 
 const port = configLoader.getConfig().services.authService.port;

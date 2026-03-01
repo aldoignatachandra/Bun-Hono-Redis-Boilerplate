@@ -16,71 +16,70 @@ services:
 
   # User Service
   service-user:
-    image: bun-hono-kafka-cqrs/service-user:staging
+    image: bun-hono-redis-cqrs/service-user:staging
     container_name: service-user-staging
     environment:
       NODE_ENV: staging
       DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/cqrs_demo_staging
       JWT_SECRET: ${JWT_SECRET}
       USER_SERVICE_PORT: 3101
-      KAFKA_BROKERS: kafka-1:9092,kafka-2:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "3101:3101"
     depends_on:
       - postgres
-      - kafka-1
-      - kafka-2
+      - redis
     networks:
       - app-network
 
   # Product Service
   service-product:
-    image: bun-hono-kafka-cqrs/service-product:staging
+    image: bun-hono-redis-cqrs/service-product:staging
     container_name: service-product-staging
     environment:
       NODE_ENV: staging
       DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/cqrs_demo_staging
       PRODUCT_SERVICE_PORT: 3102
-      KAFKA_BROKERS: kafka-1:9092,kafka-2:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "3102:3102"
     depends_on:
       - postgres
-      - kafka-1
-      - kafka-2
+      - redis
     networks:
       - app-network
 
   # Auth Service
   service-auth:
-    image: bun-hono-kafka-cqrs/service-auth:staging
+    image: bun-hono-redis-cqrs/service-auth:staging
     container_name: service-auth-staging
     environment:
       NODE_ENV: staging
       JWT_SECRET: ${JWT_SECRET}
       AUTH_SERVICE_PORT: 3100
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "3100:3100"
     networks:
       - app-network
 
-  # Kafka Brokers
-  kafka-1:
-    extends:
-      file: ../../kafka/docker-compose.yml
-    service: kafka-1
-    networks:
-      - app-network
-
-  kafka-2:
-    extends:
-      file: ../../kafka/docker-compose.yml
-    service: kafka-2
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis-staging
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_staging_data:/data
     networks:
       - app-network
 
 volumes:
   postgres_staging_data:
+  redis_staging_data:
 
 networks:
   app-network:

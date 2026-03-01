@@ -10,83 +10,15 @@
       "port": "${PORT}"
     }
   },
-  "kafka": {
-    "brokers": "${KAFKA_BROKERS}",
-    "clientId": "${KAFKA_CLIENT_ID}",
-    "ssl": true,
-    "sasl": {
-      "mechanism": "plain",
-      "username": "${KAFKA_USERNAME}",
-      "password": "${KAFKA_PASSWORD}"
-    },
-    "topics": {
-      "users.created": {
-        "partitions": 6,
-        "replicationFactor": 3,
-        "config": {
-          "retention.ms": "2592000000",
-          "cleanup.policy": "delete",
-          "compression.type": "lz4",
-          "max.message.bytes": "10485760"
-        }
-      },
-      "products.created": {
-        "partitions": 12,
-        "replicationFactor": 3,
-        "config": {
-          "retention.ms": "2592000000",
-          "cleanup.policy": "delete",
-          "compression.type": "lz4",
-          "max.message.bytes": "10485760"
-        }
-      },
-      "products.updated": {
-        "partitions": 12,
-        "replicationFactor": 3,
-        "config": {
-          "retention.ms": "2592000000",
-          "cleanup.policy": "delete",
-          "compression.type": "lz4",
-          "max.message.bytes": "10485760"
-        }
-      },
-      "products.deleted": {
-        "partitions": 12,
-        "replicationFactor": 3,
-        "config": {
-          "retention.ms": "2592000000",
-          "cleanup.policy": "delete",
-          "compression.type": "lz4",
-          "max.message.bytes": "10485760"
-        }
-      },
-      "notifications.send": {
-        "partitions": 8,
-        "replicationFactor": 3,
-        "config": {
-          "retention.ms": "2592000000",
-          "cleanup.policy": "delete",
-          "compression.type": "lz4"
-        }
-      },
-      "events.retry": {
-        "partitions": 6,
-        "replicationFactor": 3,
-        "config": {
-          "retention.ms": "2592000000",
-          "cleanup.policy": "delete",
-          "message.timestamp.type": "LogAppendTime"
-        }
-      },
-      "events.dlq": {
-        "partitions": 6,
-        "replicationFactor": 3,
-        "config": {
-          "retention.ms": "7776000000",
-          "cleanup.policy": "delete",
-          "message.timestamp.type": "LogAppendTime"
-        }
-      }
+  "redis": {
+    "host": "${REDIS_HOST}",
+    "port": "${REDIS_PORT}",
+    "password": "${REDIS_PASSWORD}",
+    "db": "${REDIS_DB}",
+    "keyPrefix": "product:",
+    "streams": {
+      "maxLen": 100000,
+      "blockMs": 5000
     }
   },
   "logging": {

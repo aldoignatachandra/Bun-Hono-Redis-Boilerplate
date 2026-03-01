@@ -1,5 +1,5 @@
-import { createProducer } from '../../../helpers/kafka';
 import logger from '../../../helpers/logger';
+import { createProducer } from '../../../helpers/redis';
 import { EventMetadata } from '../../../helpers/types';
 
 export interface UserEvent {
@@ -52,8 +52,7 @@ export async function userCreatedProducer(user: UserEvent) {
     logger.info('User created event published', {
       userId: user.id,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
   } catch (error) {
     logger.error('Failed to publish user created event', {
@@ -106,8 +105,7 @@ export async function userRestoredProducer(user: UserEvent) {
     logger.info('User restored event published', {
       userId: user.id,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
   } catch (error) {
     logger.error('Failed to publish user restored event', {
@@ -159,8 +157,7 @@ export async function userDeletedProducer(userId: string, force: boolean) {
     logger.info('User deleted event published', {
       userId,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
   } catch (error) {
     logger.error('Failed to publish user deleted event', {

@@ -2,8 +2,9 @@ import { describe, expect, it } from 'bun:test';
 
 process.env.NODE_ENV = 'dev';
 process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
-process.env.KAFKA_BROKERS = process.env.KAFKA_BROKERS ?? 'localhost:9092';
-process.env.KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID ?? 'test-client';
+process.env.REDIS_HOST = process.env.REDIS_HOST ?? 'localhost';
+process.env.REDIS_PORT = process.env.REDIS_PORT ?? '6379';
+process.env.REDIS_DB = process.env.REDIS_DB ?? '0';
 process.env.PORT = process.env.PORT ?? '3100';
 process.env.SYSTEM_USER = process.env.SYSTEM_USER ?? 'system';
 process.env.SYSTEM_PASS = process.env.SYSTEM_PASS ?? 'system';
@@ -17,7 +18,7 @@ describe('config loader', () => {
     expect(config.app).toBeDefined();
     expect(config.auth).toBeDefined();
     expect(config.database).toBeDefined();
-    expect(config.kafka).toBeDefined();
+    expect(config.redis).toBeDefined();
   });
 
   it('returns environment flags', async () => {

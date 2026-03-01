@@ -13,74 +13,15 @@
       "port": "${PORT}"
     }
   },
-  "kafka": {
-    "brokers": "${KAFKA_BROKERS}",
-    "clientId": "${KAFKA_CLIENT_ID}",
-    "ssl": false,
-    "sasl": {
-      "mechanism": "",
-      "username": "",
-      "password": ""
-    },
-    "topics": {
-      "users.created": {
-        "partitions": 1,
-        "replicationFactor": 1,
-        "config": {
-          "retention.ms": "86400000",
-          "cleanup.policy": "delete"
-        }
-      },
-      "products.created": {
-        "partitions": 1,
-        "replicationFactor": 1,
-        "config": {
-          "retention.ms": "86400000",
-          "cleanup.policy": "delete"
-        }
-      },
-      "products.updated": {
-        "partitions": 1,
-        "replicationFactor": 1,
-        "config": {
-          "retention.ms": "86400000",
-          "cleanup.policy": "delete"
-        }
-      },
-      "products.deleted": {
-        "partitions": 1,
-        "replicationFactor": 1,
-        "config": {
-          "retention.ms": "86400000",
-          "cleanup.policy": "delete"
-        }
-      },
-      "notifications.send": {
-        "partitions": 1,
-        "replicationFactor": 1,
-        "config": {
-          "retention.ms": "86400000",
-          "cleanup.policy": "delete"
-        }
-      },
-      "events.retry": {
-        "partitions": 1,
-        "replicationFactor": 1,
-        "config": {
-          "retention.ms": "86400000",
-          "cleanup.policy": "delete",
-          "message.timestamp.type": "LogAppendTime"
-        }
-      },
-      "events.dlq": {
-        "partitions": 1,
-        "replicationFactor": 1,
-        "config": {
-          "retention.ms": "86400000",
-          "cleanup.policy": "delete",
-          "message.timestamp.type": "LogAppendTime"
-        }
-      }
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": "",
+    "db": 0,
+    "keyPrefix": "auth:",
+    "streams": {
+      "maxLen": 10000,
+      "blockMs": 5000
     }
   },
   "logging": {

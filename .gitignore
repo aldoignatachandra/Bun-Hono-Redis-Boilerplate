@@ -48,8 +48,9 @@ coverage/
 tmp/
 temp/
 
-# Project documentation (ignore all /docs except api-documentation)
+# Project documentation (ignore all /docs except api-documentation and refactor-plan)
 docs/
 !docs/api-documentation/
+!docs/refactor-plan/
 MCP_SETUP_GUIDE.md
 resources/

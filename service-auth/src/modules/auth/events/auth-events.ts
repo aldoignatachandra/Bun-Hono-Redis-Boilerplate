@@ -1,5 +1,5 @@
-import { createProducer } from '../../../helpers/kafka';
 import logger from '../../../helpers/logger';
+import { createProducer } from '../../../helpers/redis';
 import { EventMetadata } from '../../../helpers/types';
 
 export interface AuthEvent {
@@ -49,8 +49,7 @@ export async function authLoginProducer(data: AuthEvent) {
     logger.info('Auth login event published', {
       userId: data.userId,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
   } catch (error) {
     logger.error('Failed to publish auth login event', {
@@ -100,8 +99,7 @@ export async function authLogoutProducer(data: AuthEvent) {
     logger.info('Auth logout event published', {
       userId: data.userId,
       topic,
-      partition: result[0].partition,
-      offset: result[0].offset,
+      messageId: result[0].id,
     });
   } catch (error) {
     logger.error('Failed to publish auth logout event', {

@@ -5,7 +5,7 @@ const subscribe = mock(async () => undefined);
 const run = mock(async (_opts: unknown) => undefined);
 const disconnect = mock(async () => undefined);
 
-mock.module('../../../../src/helpers/kafka', () => ({
+mock.module('../../../../src/helpers/redis', () => ({
   createConsumer: mock(async () => ({
     subscribe,
     run,

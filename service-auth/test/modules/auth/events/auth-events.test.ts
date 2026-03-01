@@ -15,7 +15,7 @@ const producer = {
   disconnect,
 };
 
-mock.module('../../../../src/helpers/kafka', () => ({
+mock.module('../../../../src/helpers/redis', () => ({
   createProducer: mock(async () => producer),
 }));
 

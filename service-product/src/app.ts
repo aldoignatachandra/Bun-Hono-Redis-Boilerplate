@@ -73,7 +73,7 @@ app.get('/admin/health', systemAuthMiddleware, async c => {
       mode: 'admin',
       config: {
         db: dbHealth ? 'connected' : 'disconnected',
-        kafka: 'connected', // Assuming Kafka is connected if service is running, or add check
+        redis: 'connected',
       },
       timestamp: new Date().toISOString(),
     },

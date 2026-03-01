@@ -26,14 +26,14 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@hono/swagger-ui": "0.5.3",
     "@types/ua-parser-js": "^0.7.39",
     "bcrypt": "^6.0.0",
     "dotenv": "^16.3.1",
     "drizzle-orm": "^0.29.3",
     "hono": "^3.11.7",
-    "@hono/swagger-ui": "0.5.3",
+    "ioredis": "^5.10.0",
     "jsonwebtoken": "^9.0.2",
-    "kafkajs": "^2.2.4",
     "opossum": "^9.0.0",
     "pino": "^8.17.2",
     "postgres": "^3.4.3",
@@ -41,6 +41,7 @@
     "reflect-metadata": "^0.1.14",
     "typedi": "^0.10.0",
     "ua-parser-js": "^2.0.9",
+    "uuid": "latest",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -48,6 +49,8 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.5",
     "@types/opossum": "8.1.9",
+    "@types/ioredis": "^5.0.0",
+    "@types/uuid": "latest",
     "drizzle-kit": "^0.20.6",
     "typescript": "^5.6.3",
     "bun-types": "latest",
