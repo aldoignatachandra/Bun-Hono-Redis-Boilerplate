@@ -1,7 +1,7 @@
 {
   "name": "bun-hono-redis-cqrs",
   "version": "2.0.0",
-  "description": "Production-grade microservices boilerplate with Bun, Hono, PostgreSQL, and Redis",
+  "description": "A comprehensive microservices boilerplate built with Bun, Hono, and Redis Streams, featuring CQRS pattern, event-driven architecture, and PostgreSQL with Drizzle ORM",
   "type": "module",
   "private": true,
   "scripts": {
