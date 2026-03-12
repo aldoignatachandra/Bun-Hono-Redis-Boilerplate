@@ -7,7 +7,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Relational_DB-4169E1?logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-A production-ready, high-performance microservices starter kit. Built with **Bun** runtime, **Hono** web framework, **PostgreSQL** (with Drizzle ORM), and **Redis Streams** for event-driven communication.
+High-performance microservices starter kit. Built with **Bun** runtime, **Hono** web framework, **PostgreSQL** (with Drizzle ORM), and **Redis Streams** for event-driven communication.
 
 This boilerplate implements the **CQRS** (Command Query Responsibility Segregation) pattern, ensuring a clean separation between read and write operations, and uses **Redis Streams** for asynchronous inter-service communication.
 
@@ -22,9 +22,9 @@ This boilerplate implements the **CQRS** (Command Query Responsibility Segregati
 - [Getting Started](#-getting-started)
   - [1. Clone & Install](#1-clone--install)
   - [2. Environment Configuration](#2-environment-configuration)
-- - [3. Start Infrastructure](#3-start-infrastructure-redis--postgres)
-- [4. Database Setup](#4-database-setup-migrations--seeds)
-- [5. Run Services](#5-run-services)
+  - [3. Start Infrastructure](#3-start-infrastructure-redis--postgres)
+  - [4. Database Setup](#4-database-setup-migrations--seeds)
+  - [5. Run Services](#5-run-services)
 - [API Documentation](#-api-documentation)
 - [Deployment](#-deployment)
 - [Troubleshooting](#-troubleshooting)
