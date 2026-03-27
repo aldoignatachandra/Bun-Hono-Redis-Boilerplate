@@ -54,3 +54,6 @@ docs/
 !docs/refactor-plan/
 MCP_SETUP_GUIDE.md
 resources/
+
+# Claude Code memory
+memory/
