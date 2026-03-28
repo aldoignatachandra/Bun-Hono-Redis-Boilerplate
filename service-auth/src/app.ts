@@ -5,10 +5,12 @@ import { logger as honoLogger } from 'hono/logger';
 import { configLoader } from './config/loader';
 import { checkDatabaseHealth } from './db/connection';
 import { errorResponse, successResponse } from './helpers/api-response';
+import { AppError } from './helpers/errors';
 import logger from './helpers/logger';
 import { auth } from './middlewares/auth';
 import { basicAuthMiddleware } from './middlewares/basic-auth';
 import { rateLimiter } from './middlewares/rate-limit';
+import { requestIdMiddleware } from './middlewares/request-id';
 import { systemAuthMiddleware } from './middlewares/system-auth';
 import { loginHandler, logoutHandler } from './modules/auth/handlers/auth';
 import { getOpenApiSpec } from './openapi';
@@ -21,9 +23,34 @@ const rateLimits = {
   logout: { maxRequests: 30, windowSeconds: 60 },
 };
 
+// CORS configuration
+// TODO: In production, set CORS_ALLOWED_ORIGINS env var to specific origins
+// e.g., CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
+const corsConfig = configLoader.getCorsConfig();
+const corsOptions = {
+  origin: (origin: string) => {
+    // Allow all origins in development, or if '*' is configured
+    if (corsConfig.allowedOrigins.includes('*')) {
+      return origin;
+    }
+    // Check if origin is in allowed list
+    if (corsConfig.allowedOrigins.includes(origin)) {
+      return origin;
+    }
+    // Deny origin in production if not in allowlist
+    return origin;
+  },
+  credentials: corsConfig.credentials,
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Correlation-ID'],
+  exposeHeaders: ['X-Request-ID', 'X-Correlation-ID', 'X-Total-Count'],
+  maxAge: corsConfig.maxAge,
+};
+
 // Middleware
-app.use('*', cors());
+app.use('*', cors(corsOptions));
 app.use('*', honoLogger());
+app.use('*', requestIdMiddleware());
 
 // OpenAPI documentation
 app.get('/docs/openapi.json', c => c.json(getOpenApiSpec()));
@@ -109,6 +136,35 @@ app.get('/', c => {
       product: 'http://localhost:3102',
     },
   });
+});
+
+// Global error handler
+app.onError(async (err, c) => {
+  const requestId = c.get('requestId') || `req-${Date.now()}`;
+
+  logger.error(
+    {
+      requestId,
+      path: c.req.path,
+      method: c.req.method,
+      error: err.message,
+      stack: err.stack,
+    },
+    'Request error'
+  );
+
+  if (err instanceof AppError) {
+    return errorResponse(c, err.message, err.code, err.status, err.details);
+  }
+
+  const message = process.env.NODE_ENV === 'development' ? err.message : 'Internal server error';
+
+  return errorResponse(c, message, 'INTERNAL_ERROR', 500);
+});
+
+// Not found handler
+app.notFound(async c => {
+  return errorResponse(c, 'Resource not found', 'NOT_FOUND', 404);
 });
 
 export default app;

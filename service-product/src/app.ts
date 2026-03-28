@@ -6,16 +6,46 @@ import { Container } from 'typedi';
 import { configLoader } from './config/loader';
 import { checkDatabaseHealth } from './db/connection';
 import { errorResponse, successResponse } from './helpers/api-response';
+import {
+  AppError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from './helpers/errors';
 import logger from './helpers/logger';
+import { requestIdMiddleware } from './middlewares/request-id';
 import { systemAuthMiddleware } from './middlewares/system-auth';
 import productRoutes from './modules/product/handlers/product';
 import { getOpenApiSpec } from './openapi';
 
 const app = new Hono();
 
+// CORS configuration
+// TODO: In production, set CORS_ALLOWED_ORIGINS env var to specific origins
+const corsConfig = configLoader.getCorsConfig();
+const corsOptions = {
+  origin: (origin: string) => {
+    if (corsConfig.allowedOrigins.includes('*')) {
+      return origin;
+    }
+    if (corsConfig.allowedOrigins.includes(origin)) {
+      return origin;
+    }
+    return origin;
+  },
+  credentials: corsConfig.credentials,
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Correlation-ID'],
+  exposeHeaders: ['X-Request-ID', 'X-Correlation-ID', 'X-Total-Count'],
+  maxAge: corsConfig.maxAge,
+};
+
 // Middleware
-app.use('*', cors());
+app.use('*', cors(corsOptions));
 app.use('*', honoLogger());
+app.use('*', requestIdMiddleware());
 
 // OpenAPI documentation
 app.get('/docs/openapi.json', c => c.json(getOpenApiSpec()));
@@ -80,6 +110,35 @@ app.get('/admin/health', systemAuthMiddleware, async c => {
     },
     'Admin health check passed'
   );
+});
+
+// Global error handler
+app.onError(async (err, c) => {
+  const requestId = c.get('requestId') || `req-${Date.now()}`;
+
+  logger.error(
+    {
+      requestId,
+      path: c.req.path,
+      method: c.req.method,
+      error: err.message,
+      stack: err.stack,
+    },
+    'Request error'
+  );
+
+  if (err instanceof AppError) {
+    return errorResponse(c, err.message, err.code, err.status, err.details);
+  }
+
+  const message = process.env.NODE_ENV === 'development' ? err.message : 'Internal server error';
+
+  return errorResponse(c, message, 'INTERNAL_ERROR', 500);
+});
+
+// Not found handler
+app.notFound(async c => {
+  return errorResponse(c, 'Resource not found', 'NOT_FOUND', 404);
 });
 
 export default app;

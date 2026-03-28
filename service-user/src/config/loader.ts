@@ -75,6 +75,13 @@ const ConfigSchema = z.object({
       mockExternalServices: z.boolean().optional(),
     })
     .optional(),
+  cors: z
+    .object({
+      allowedOrigins: z.array(z.string()).default(['*']),
+      credentials: z.boolean().default(true),
+      maxAge: z.number().default(3600),
+    })
+    .optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -298,6 +305,13 @@ class ConfigLoader {
       if (process.env.SYSTEM_PASS) config.security.systemAuth.password = process.env.SYSTEM_PASS;
     }
 
+    // CORS overrides
+    // TODO: Change CORS_ALLOWED_ORIGINS to specific origins in production
+    if (process.env.CORS_ALLOWED_ORIGINS !== undefined) {
+      if (!config.cors) config.cors = {};
+      config.cors.allowedOrigins = process.env.CORS_ALLOWED_ORIGINS.split(',').map(s => s.trim());
+    }
+
     // 5. Substitute any ${VAR} placeholders in the config (e.g. from JSON files)
     config = this.substituteEnvVars(config);
 
@@ -323,6 +337,24 @@ class ConfigLoader {
 
   public isProduction(): boolean {
     return this.env === 'prod';
+  }
+
+  public getCorsConfig(): { allowedOrigins: string[]; credentials: boolean; maxAge: number } {
+    const cors = this.config.cors;
+    if (!cors) {
+      return { allowedOrigins: ['*'], credentials: true, maxAge: 3600 };
+    }
+    return {
+      allowedOrigins: cors.allowedOrigins ?? ['*'],
+      credentials: cors.credentials ?? true,
+      maxAge: cors.maxAge ?? 3600,
+    };
+  }
+
+  public isOriginAllowed(origin: string): boolean {
+    const cors = this.getCorsConfig();
+    if (cors.allowedOrigins.includes('*')) return true;
+    return cors.allowedOrigins.includes(origin);
   }
 }
 
