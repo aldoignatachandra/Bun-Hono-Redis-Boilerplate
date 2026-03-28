@@ -13,37 +13,78 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: staging
+    timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build and push auth service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./service-auth/Dockerfile.staging
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-auth:staging
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-auth:latest
+
+      - name: Build and push user service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./service-user/Dockerfile.staging
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-user:staging
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-user:latest
+
+      - name: Build and push product service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./service-product/Dockerfile.staging
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-product:staging
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-product:latest
+
       - name: Deploy to staging
-        uses: appleboy/ssh-action@v0.1.5
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
+            # Note: This is a reference template. Customize the deployment script below.
+            # Example deployment commands:
+
             # Pull latest images
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-staging:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-staging:latest
-            
+            # docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-auth:staging
+            # docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-user:staging
+            # docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-product:staging
+
             # Stop existing containers
-            docker-compose -f infra/docker/compose/staging.yml down || true
-            
+            # docker-compose -f docker-compose.staging.yml down || true
+
             # Start new containers
-            docker-compose -f infra/docker/compose/staging.yml up -d
-            
+            # docker-compose -f docker-compose.staging.yml up -d
+
             # Wait for services to be healthy
-            sleep 30
-            
+            # sleep 30
+
             # Run database migrations
-            docker-compose -f infra/docker/compose/staging.yml exec user-service bun run db:migrate:deploy
-            docker-compose -f infra/docker/compose/staging.yml exec product-service bun run db:migrate:deploy
+            # docker-compose -f docker-compose.staging.yml exec service-auth bun run db:setup
+            # docker-compose -f docker-compose.staging.yml exec service-user bun run db:setup
+            # docker-compose -f docker-compose.staging.yml exec service-product bun run db:setup
+
+            echo "Staging deployment template executed. Customize the script above for your infrastructure."
