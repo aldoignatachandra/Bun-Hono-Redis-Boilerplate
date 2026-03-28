@@ -182,15 +182,15 @@ List products with pagination and filters.
 
 **Query Parameters:**
 
-| Param            | Type    | Description                               |
-| ---------------- | ------- | ----------------------------------------- |
-| `page`           | number  | Page number (default: 1)                  |
-| `limit`          | number  | Items per page (default: 10)              |
-| `search`         | string  | Search by name or description             |
-| `minPrice`       | number  | Minimum price filter                      |
-| `maxPrice`       | number  | Maximum price filter                      |
-| `ownerId`        | string  | Filter by owner                           |
-| `includeDeleted` | boolean | Include soft-deleted items (Admin/Owner)  |
+| Param            | Type    | Description                              |
+| ---------------- | ------- | ---------------------------------------- |
+| `page`           | number  | Page number (default: 1)                 |
+| `limit`          | number  | Items per page (default: 10)             |
+| `search`         | string  | Search by name or description            |
+| `minPrice`       | number  | Minimum price filter                     |
+| `maxPrice`       | number  | Maximum price filter                     |
+| `ownerId`        | string  | Filter by owner                          |
+| `includeDeleted` | boolean | Include soft-deleted items (Admin/Owner) |
 
 **Response (200 OK):**
 
@@ -283,9 +283,9 @@ Soft delete a product.
 
 **Query Parameters:**
 
-| Param   | Type    | Description                                  |
-| ------- | ------- | -------------------------------------------- |
-| `force` | boolean | If true, permanently delete (Admin only)     |
+| Param   | Type    | Description                              |
+| ------- | ------- | ---------------------------------------- |
+| `force` | boolean | If true, permanently delete (Admin only) |
 
 **Response (200 OK):**
 
@@ -318,13 +318,13 @@ Restore a soft-deleted product.
 
 ## Error Codes
 
-| Code                    | Status | Description                                |
-| ----------------------- | ------ | ------------------------------------------ |
-| `PRODUCT_NOT_FOUND`     | 404    | Product ID does not exist                  |
-| `PRODUCT_UPDATE_FAILED` | 403    | User does not own the product              |
-| `PRODUCT_CREATE_FAILED` | 400    | Validation error or bad input              |
-| `PRODUCT_DELETE_FAILED` | 500    | Server error during deletion               |
-| `INVALID_VARIANTS`      | 400    | Variant data is malformed                  |
+| Code                    | Status | Description                   |
+| ----------------------- | ------ | ----------------------------- |
+| `PRODUCT_NOT_FOUND`     | 404    | Product ID does not exist     |
+| `PRODUCT_UPDATE_FAILED` | 403    | User does not own the product |
+| `PRODUCT_CREATE_FAILED` | 400    | Validation error or bad input |
+| `PRODUCT_DELETE_FAILED` | 500    | Server error during deletion  |
+| `INVALID_VARIANTS`      | 400    | Variant data is malformed     |
 
 ---
 

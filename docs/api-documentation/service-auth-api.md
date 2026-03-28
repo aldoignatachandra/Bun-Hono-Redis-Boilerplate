@@ -38,7 +38,7 @@ The Auth Service is responsible for:
 | **Single Session**   | Only one active session per user        |
 | **Basic Auth**       | User credentials for login              |
 | **System Auth**      | Service-to-service authentication       |
-| **Activity Logging** | Login/logout events logged via Kafka    |
+| **Activity Logging** | Login/logout events logged via Redis Streams |
 
 ---
 
@@ -179,7 +179,7 @@ Authorization: Basic YWRtaW46YWRtaW4xMjM=
     "mode": "admin",
     "config": {
       "db": "connected",
-      "kafka": "connected"
+      "redis": "connected"
     },
     "timestamp": "2026-02-21T10:00:00.000Z"
   }

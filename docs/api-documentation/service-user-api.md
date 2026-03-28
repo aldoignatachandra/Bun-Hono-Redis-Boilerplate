@@ -186,7 +186,7 @@ Authorization: Basic YWRtaW46YWRtaW4xMjM=
     "mode": "admin",
     "config": {
       "db": "connected",
-      "kafka": "connected"
+      "redis": "connected"
     },
     "timestamp": "2026-02-21T10:00:00.000Z"
   }
