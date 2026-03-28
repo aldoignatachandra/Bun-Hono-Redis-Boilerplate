@@ -4,7 +4,7 @@
 ![Bun](https://img.shields.io/badge/Bun-v1.1+-000000?logo=bun&logoColor=white)
 ![Hono](https://img.shields.io/badge/Hono-v4+-E36002?logo=hono&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Streams-DC382D?logo=redis&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Relational_DB-4169E1?logo=postgresql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
 High-performance microservices starter kit. Built with **Bun** runtime, **Hono** web framework, **PostgreSQL** (with Drizzle ORM), and **Redis Streams** for event-driven communication.
@@ -13,21 +13,13 @@ This boilerplate implements the **CQRS** (Command Query Responsibility Segregati
 
 ---
 
-## 📚 Table of Contents
+## 🎯 Why This Boilerplate?
 
-- [Features](#-features)
-- [Architecture](#-system-architecture)
-- [Project Structure](#-project-structure)
-- [Prerequisites](#-prerequisites)
-- [Getting Started](#-getting-started)
-  - [1. Clone & Install](#1-clone--install)
-  - [2. Environment Configuration](#2-environment-configuration)
-  - [3. Start Infrastructure](#3-start-infrastructure-redis--postgres)
-  - [4. Database Setup](#4-database-setup-migrations--seeds)
-  - [5. Run Services](#5-run-services)
-- [API Documentation](#-api-documentation)
-- [Deployment](#-deployment)
-- [Troubleshooting](#-troubleshooting)
+- **Production Ready** - CORS, Error Handling, JWT Validation, Graceful Shutdown built-in
+- **Fast Development** - Auto-generated OpenAPI docs, hot reload, seed scripts
+- **Event-Driven** - Redis Streams for async inter-service communication
+- **CQRS Pattern** - Clean separation between read and write operations
+- **Type Safe** - Full TypeScript + Zod validation + Drizzle ORM
 
 ---
 
@@ -39,9 +31,16 @@ This boilerplate implements the **CQRS** (Command Query Responsibility Segregati
 - **High Performance**: Built on Bun (fast JS runtime) and Hono (ultrafast web framework).
 - **Type Safety**: Full TypeScript support with Zod validation.
 - **Modern ORM**: Drizzle ORM for type-safe SQL queries and migrations.
-- **Authentication**: JWT (Stateless) for API access + Stateful Session validation (Redis-style logic in Postgres).
+- **Authentication**: JWT (Stateless) for API access + Basic Auth for internal APIs.
 - **Internal APIs**: Secured System-to-System communication using Basic Auth.
 - **Documentation**: Auto-generated OpenAPI (Swagger) docs for every service.
+- **CORS Restriction**: Environment-specific origin allowlist with credentials support.
+- **Global Error Handler**: Consistent error responses with AppError class hierarchy.
+- **JWT Validation**: Startup validation with blacklist + minimum length checks.
+- **Graceful Shutdown**: SIGTERM/SIGINT handling with connection cleanup.
+- **Request ID Middleware**: Request correlation across services via X-Request-ID header.
+- **Circuit Breaker**: Opossum-based fault tolerance for external calls.
+- **Rate Limiting**: Redis-backed per-route rate limiting.
 
 ---
 
@@ -49,35 +48,28 @@ This boilerplate implements the **CQRS** (Command Query Responsibility Segregati
 
 ### High-Level Overview
 
-```mermaid
-graph TB
-  subgraph Client_Layer
-    Client[Web / Mobile Client]
-  end
-
-  subgraph API_Gateway_Logic
-    direction TB
-    Auth[🔐 Auth Service :3100]
-    User[👤 User Service :3101]
-    Prod[📦 Product Service :3102]
-  end
-
-  subgraph Infrastructure
-    PG[(🐘 PostgreSQL)]
-    Redis[(🧠 Redis Streams)]
-  end
-
-  Client -->|HTTP/REST| Auth
-  Client -->|HTTP/REST| User
-  Client -->|HTTP/REST| Prod
-
-  Auth -->|SQL| PG
-  User -->|SQL| PG
-  Prod -->|SQL| PG
-
-  Auth <-->|Streams| Redis
-  User <-->|Streams| Redis
-  Prod <-->|Streams| Redis
+```
+┌──────────────────────────────────────────────────────────┐
+│                         Client                           │
+└─────────────────────────┬────────────────────────────────┘
+                          │ HTTP/REST
+                          ▼
+┌──────────────────────────────────────────────────────────┐
+│                    API Services                          │
+│      ┌──────────┐  ┌──────────┐  ┌──────────┐            │
+│      │   Auth   │  │   User   │  │ Product  │            │
+│      │  :3100   │  │  :3101   │  │  :3102   │            │
+│      └────┬─────┘  └────┬─────┘  └────┬─────┘            │
+│           │             │             │                  │
+│           └─────────────┴─────────────┘                  │
+│                         │                                │
+│              PostgreSQL │ Drizzle ORM                    │
+└─────────────────────────┼────────────────────────────────┘
+                          │
+                          ▼
+              ┌───────────────────────┐
+              │     Redis Streams     │
+              └───────────────────────┘
 ```
 
 ### Event-Driven Flow (CQRS Example)
@@ -86,48 +78,55 @@ When a product is created, the write operation happens synchronously, but other 
 
 ```mermaid
 sequenceDiagram
-  participant C as Client
-  participant P as Product Service
-  participant D as PostgreSQL
-  participant K as Redis Streams
-  participant U as User Service
+    participant C as Client
+    participant P as Product Service
+    participant DB as PostgreSQL
+    participant R as Redis Streams
+    participant U as User Service
 
-  Note over C,P: Command Side (Write)
-  C->>P: POST /products (Create Product)
-  P->>D: INSERT into products table
-  P->>K: XADD "products.created" event
-  P-->>C: 201 Created
+    C->>P: POST /products (Create)
+    P->>DB: INSERT product
+    P->>R: XADD "products.created"
+    P-->>C: 201 Created
 
-  Note over K,U: Async Event Processing
-  K->>U: XREADGROUP "products.created"
-  U->>U: Update internal stats / Log activity
+    R-->>U: XREADGROUP (async)
+    U->>U: Update activity logs
 ```
 
 ---
 
-## � Project Structure
+## 📁 Project Structure
 
-```bash
+```
 bun-hono-redis-pubsub-boilerplate/
-├── infra/                  # Infrastructure configurations
-│   └── redis/
-│       └── docker-compose.yml  # Redis Streams
-├── docs/                   # Centralized documentation
-│   └── api-documentation/  # Detailed API specs
-├── service-auth/           # 🔐 Authentication Service
+├── service-auth/                 # 🔐 Authentication Service (Port 3100)
 │   ├── src/
-│   │   ├── application/    # Use Cases & Business Logic
-│   │   ├── domain/         # Entities & Domain Models
-│   │   ├── infrastructure/ # DB, Redis, Repositories
-│   │   └── interface/      # HTTP Handlers (Hono)
-│   └── drizzle/            # Migrations
-├── service-user/           # 👤 User Management Service
+│   │   ├── app.ts               # Hono app + middleware
+│   │   ├── index.ts             # Entry point with graceful shutdown
+│   │   ├── config/
+│   │   │   ├── loader.ts        # Zod-validated config loader
+│   │   │   └── jwt-validation.ts # JWT secret validation
+│   │   ├── db/
+│   │   │   ├── connection.ts    # Drizzle + Postgres connection
+│   │   │   └── schema.ts       # Database schema
+│   │   ├── helpers/
+│   │   │   ├── errors.ts       # AppError class hierarchy
+│   │   │   ├── api-response.ts # Standardized responses
+│   │   │   └── redis.ts        # Redis Streams producer
+│   │   ├── middlewares/
+│   │   │   ├── auth.ts         # JWT authentication
+│   │   │   ├── request-id.ts   # Request ID propagation
+│   │   │   └── rate-limit.ts   # Rate limiting
+│   │   └── modules/auth/
+│   │       └── handlers/        # Route handlers
+│   └── .env.example
+├── service-user/                 # 👤 User Management Service (Port 3101)
 │   └── ... (similar structure)
-├── service-product/        # 📦 Product Catalog Service
+├── service-product/             # 📦 Product Catalog Service (Port 3102)
 │   └── ... (similar structure)
-├── .gitignore
-├── package.json            # Workspace configuration
-└── README.md
+├── infra/redis/                 # Redis docker-compose
+├── docs/plans/                  # Implementation design docs
+└── memory/                      # Project conventions (MEMORY.md)
 ```
 
 ---
@@ -136,18 +135,16 @@ bun-hono-redis-pubsub-boilerplate/
 
 Before you begin, ensure you have the following installed:
 
-1.  **Bun** (v1.1 or later)
-    ```bash
-    curl -fsSL https://bun.sh/install | bash
-    ```
-2.  **Docker & Docker Compose** (For running Redis and PostgreSQL)
-3.  **Git**
+1. **Bun** (v1.1 or later)
+   ```bash
+   curl -fsSL https://bun.sh/install | bash
+   ```
+2. **Docker & Docker Compose** (For running Redis and PostgreSQL)
+3. **Git**
 
 ---
 
 ## 🚀 Getting Started
-
-Follow these steps strictly to get the boilerplate running locally.
 
 ### 1. Clone & Install
 
@@ -170,20 +167,23 @@ cp service-user/.env.example service-user/.env
 cp service-product/.env.example service-product/.env
 ```
 
-**Critical Variables Explained:**
+**Environment Variables:**
 
-| Variable      | Description                                    | Default (Local)                                     |
-| :------------ | :--------------------------------------------- | :-------------------------------------------------- |
-| `DB_URL`      | Connection string for PostgreSQL               | `postgresql://postgres:postgres@localhost:5432/...` |
-| `REDIS_HOST`  | Redis host                                     | `localhost`                                         |
-| `REDIS_PORT`  | Redis port                                     | `6379`                                              |
-| `JWT_SECRET`  | Secret key for signing access tokens           | Change this in production!                          |
-| `SYSTEM_USER` | Username for internal service-to-service calls | `admin`                                             |
-| `SYSTEM_PASS` | Password for internal service-to-service calls | `admin123`                                          |
+| Variable                | Description                       | Default                                                       |
+| ----------------------- | --------------------------------- | ------------------------------------------------------------- |
+| `NODE_ENV`              | Environment mode                  | `dev`                                                         |
+| `DB_URL`                | PostgreSQL connection string      | `postgresql://postgres:postgres@localhost:5432/cqrs_demo_dev` |
+| `DB_POOL_MAX`           | Max database connections          | `20`                                                          |
+| `DB_IDLE_TIMEOUT`       | Idle timeout (seconds)            | `20`                                                          |
+| `DB_CONNECTION_TIMEOUT` | Connection timeout (seconds)      | `10`                                                          |
+| `JWT_SECRET`            | JWT signing secret (min 32 bytes) | `dev-secret-change-me-in-prod`                                |
+| `REDIS_HOST`            | Redis host                        | `localhost`                                                   |
+| `REDIS_PORT`            | Redis port                        | `6379`                                                        |
+| `CORS_ALLOWED_ORIGINS`  | Allowed CORS origins              | `*`                                                           |
+| `SYSTEM_USER`           | Internal API username             | `admin`                                                       |
+| `SYSTEM_PASS`           | Internal API password             | `admin123`                                                    |
 
 ### 3. Start Infrastructure (Redis & Postgres)
-
-We use Docker to run the required infrastructure.
 
 **Start Redis:**
 
@@ -218,27 +218,27 @@ cd service-product && bun run db:setup && cd ..
 
 **Seeding Data (Order is Important!):**
 
-1.  **Seed Users**: Creates Admin and Default User.
+1. **Seed Users**: Creates Admin and Default User.
 
-    ```bash
-    cd service-user && bun run db:seed
-    ```
+   ```bash
+   cd service-user && bun run db:seed
+   ```
 
-    _Credentials created:_
-    - Admin: `admin@example.com` / `Admin123!`
-    - User: `user@example.com` / `User123!`
+   _Credentials created:_
+   - Admin: `admin@example.com` / `Admin123!`
+   - User: `user@example.com` / `User123!`
 
-2.  **Start User Service**: Required because Product seeding fetches user IDs via API.
+2. **Start User Service**: Required because Product seeding fetches user IDs via API.
 
-    ```bash
-    # Open a new terminal
-    cd service-user && bun run dev
-    ```
+   ```bash
+   # Open a new terminal
+   cd service-user && bun run dev
+   ```
 
-3.  **Seed Products**: Fetches the oldest user to set as the "owner" of products.
-    ```bash
-    cd service-product && bun run db:seed
-    ```
+3. **Seed Products**: Fetches the oldest user to set as the "owner" of products.
+   ```bash
+   cd service-product && bun run db:seed
+   ```
 
 ### 5. Run Services
 
@@ -269,20 +269,81 @@ cd service-product && bun run dev
 Each service exposes an interactive Swagger UI.
 
 | Service     | Base URL                | Swagger UI                          | Key Features                        |
-| :---------- | :---------------------- | :---------------------------------- | :---------------------------------- |
+| ----------- | ----------------------- | ----------------------------------- | ----------------------------------- |
 | **Auth**    | `http://localhost:3100` | [/docs](http://localhost:3100/docs) | Login, Register, Session Management |
 | **User**    | `http://localhost:3101` | [/docs](http://localhost:3101/docs) | CRUD Users, Internal User Lookup    |
 | **Product** | `http://localhost:3102` | [/docs](http://localhost:3102/docs) | CRUD Products, Variant Management   |
 
-**Detailed Markdown Docs:**
+---
 
-- [Auth Service API Docs](docs/api-documentation/service-auth-api.md)
-- [User Service API Docs](docs/api-documentation/service-user-api.md)
-- [Product Service API Docs](docs/api-documentation/service-product-api.md)
+## 🔧 Available Scripts
+
+| Script                  | Description                   |
+| ----------------------- | ----------------------------- |
+| `bun run dev`           | Start all services (parallel) |
+| `bun run build`         | Build all services            |
+| `bun run lint`          | Lint all services             |
+| `bun run format`        | Format all services           |
+| `bun run redis:up`      | Start Redis container         |
+| `bun run redis:down`    | Stop Redis container          |
+| `bun test`              | Run all tests                 |
+| `bun run test:coverage` | Run tests with coverage       |
 
 ---
 
-## � Deployment
+## 📦 API Response Format
+
+All responses follow a consistent format:
+
+**Success:**
+
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": { ... }
+}
+```
+
+**Error:**
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "details": { ... }
+  }
+}
+```
+
+---
+
+## ⚡ Error Handling
+
+Throw errors from handlers - the global error handler formats them automatically:
+
+```typescript
+// Throws 400 with VALIDATION_ERROR code
+throw new ValidationError({ field: "email", message: "Invalid email" });
+
+// Throws 404 with NOT_FOUND code
+throw new NotFoundError("User", userId);
+
+// Throws 401 with UNAUTHORIZED code
+throw new UnauthorizedError();
+
+// Throws 403 with FORBIDDEN code
+throw new ForbiddenError();
+
+// Throws 409 with CONFLICT code
+throw new ConflictError("User already exists");
+```
+
+---
+
+## 🚢 Deployment
 
 To deploy this microservices architecture, you should build Docker images for each service.
 
@@ -313,10 +374,10 @@ CMD ["bun", "run", "src/index.ts"]
 
 ---
 
-## 🔧 Troubleshooting
+## 🔍 Troubleshooting
 
 | Issue                               | Possible Cause                               | Solution                                                                |
-| :---------------------------------- | :------------------------------------------- | :---------------------------------------------------------------------- |
+| ----------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------- |
 | **Connection Refused (Redis)**      | Redis container not running or ports blocked | Run `bun run redis:up` and check `docker ps`.                           |
 | **Relation does not exist**         | Migrations not run                           | Run `bun run db:setup` in the affected service.                         |
 | **401 Unauthorized (Internal API)** | System credentials mismatch                  | Ensure `SYSTEM_USER` and `SYSTEM_PASS` match in all `.env` files.       |
