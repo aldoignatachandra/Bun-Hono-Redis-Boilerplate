@@ -48,28 +48,35 @@ This boilerplate implements the **CQRS** (Command Query Responsibility Segregati
 
 ### High-Level Overview
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                         Client                           │
-└─────────────────────────┬────────────────────────────────┘
-                          │ HTTP/REST
-                          ▼
-┌──────────────────────────────────────────────────────────┐
-│                    API Services                          │
-│      ┌──────────┐  ┌──────────┐  ┌──────────┐            │
-│      │   Auth   │  │   User   │  │ Product  │            │
-│      │  :3100   │  │  :3101   │  │  :3102   │            │
-│      └────┬─────┘  └────┬─────┘  └────┬─────┘            │
-│           │             │             │                  │
-│           └─────────────┴─────────────┘                  │
-│                         │                                │
-│              PostgreSQL │ Drizzle ORM                    │
-└─────────────────────────┼────────────────────────────────┘
-                          │
-                          ▼
-              ┌───────────────────────┐
-              │     Redis Streams     │
-              └───────────────────────┘
+```mermaid
+graph TB
+    subgraph Client["🌐 Client Layer"]
+        C[Web / Mobile]
+    end
+
+    subgraph Services["⚙️ API Services"]
+        direction LR
+        A[🔐 Auth<br/>:3100]
+        U[👤 User<br/>:3101]
+        P[📦 Product<br/>:3102]
+    end
+
+    subgraph Infra["🗄️ Infrastructure"]
+        DB[(🐘 PostgreSQL<br/>Drizzle ORM)]
+        R[(🧠 Redis Streams)]
+    end
+
+    C -->|HTTP/REST| A
+    C -->|HTTP/REST| U
+    C -->|HTTP/REST| P
+
+    A --> DB
+    U --> DB
+    P --> DB
+
+    A <-->|Events| R
+    U <-->|Events| R
+    P <-->|Events| R
 ```
 
 ### Event-Driven Flow (CQRS Example)
